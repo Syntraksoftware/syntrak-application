@@ -11,15 +11,15 @@
 		A1000003 /* ContentView.swift */ = {isa = PBXBuildFile; fileRef = A1000004 /* ContentView.swift */; };
 		A1000005 /* Assets.xcassets */ = {isa = PBXBuildFile; fileRef = A1000006 /* Assets.xcassets */; };
 		A1000007 /* Preview Assets.xcassets */ = {isa = PBXBuildFile; fileRef = A1000008 /* Preview Assets.xcassets */; };
-		A1000009 /* Activity.swift */ = {isa = PBXBuildFile; fileRef = A1000010 /* Activity.swift */; };
-		A1000011 /* LocationPoint.swift */ = {isa = PBXBuildFile; fileRef = A1000012 /* LocationPoint.swift */; };
-		A1000013 /* LocationTracker.swift */ = {isa = PBXBuildFile; fileRef = A1000014 /* LocationTracker.swift */; };
-		A1000015 /* ActivityStore.swift */ = {isa = PBXBuildFile; fileRef = A1000016 /* ActivityStore.swift */; };
-		A1000017 /* HomeView.swift */ = {isa = PBXBuildFile; fileRef = A1000018 /* HomeView.swift */; };
-		A1000019 /* ActivityListView.swift */ = {isa = PBXBuildFile; fileRef = A1000020 /* ActivityListView.swift */; };
-		A1000021 /* ActivityDetailView.swift */ = {isa = PBXBuildFile; fileRef = A1000022 /* ActivityDetailView.swift */; };
-		A1000023 /* RecordActivityView.swift */ = {isa = PBXBuildFile; fileRef = A1000024 /* RecordActivityView.swift */; };
-		A1000025 /* ProfileView.swift */ = {isa = PBXBuildFile; fileRef = A1000026 /* ProfileView.swift */; };
+		A1000009 /* Activity.swift */ = {isa = PBXBuildFile; fileRef = A1000027 /* Activity.swift */; };
+		A1000028 /* LocationPoint.swift */ = {isa = PBXBuildFile; fileRef = A1000029 /* LocationPoint.swift */; };
+		A100002A /* LocationTracker.swift */ = {isa = PBXBuildFile; fileRef = A100002B /* LocationTracker.swift */; };
+		A100002C /* ActivityStore.swift */ = {isa = PBXBuildFile; fileRef = A100002D /* ActivityStore.swift */; };
+		A100002E /* HomeView.swift */ = {isa = PBXBuildFile; fileRef = A100002F /* HomeView.swift */; };
+		A1000030 /* ActivityListView.swift */ = {isa = PBXBuildFile; fileRef = A1000031 /* ActivityListView.swift */; };
+		A1000032 /* ActivityDetailView.swift */ = {isa = PBXBuildFile; fileRef = A1000033 /* ActivityDetailView.swift */; };
+		A1000034 /* RecordActivityView.swift */ = {isa = PBXBuildFile; fileRef = A1000035 /* RecordActivityView.swift */; };
+		A1000036 /* ProfileView.swift */ = {isa = PBXBuildFile; fileRef = A1000037 /* ProfileView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,15 +28,15 @@
 		A1000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000008 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		A1000010 /* Activity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Activity.swift; sourceTree = "<group>"; };
-		A1000012 /* LocationPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPoint.swift; sourceTree = "<group>"; };
-		A1000014 /* LocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTracker.swift; sourceTree = "<group>"; };
-		A1000016 /* ActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityStore.swift; sourceTree = "<group>"; };
-		A1000018 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		A1000020 /* ActivityListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityListView.swift; sourceTree = "<group>"; };
-		A1000022 /* ActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityDetailView.swift; sourceTree = "<group>"; };
-		A1000024 /* RecordActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordActivityView.swift; sourceTree = "<group>"; };
-		A1000026 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		A1000027 /* Activity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Activity.swift; sourceTree = "<group>"; };
+		A1000029 /* LocationPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPoint.swift; sourceTree = "<group>"; };
+		A100002B /* LocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTracker.swift; sourceTree = "<group>"; };
+		A100002D /* ActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityStore.swift; sourceTree = "<group>"; };
+		A100002F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		A1000031 /* ActivityListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityListView.swift; sourceTree = "<group>"; };
+		A1000033 /* ActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityDetailView.swift; sourceTree = "<group>"; };
+		A1000035 /* RecordActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordActivityView.swift; sourceTree = "<group>"; };
+		A1000037 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,11 +63,11 @@
 			children = (
 				A1000002 /* SyntrakApp.swift */,
 				A1000004 /* ContentView.swift */,
-				A100000E /* Models */,
-				A100000F /* Services */,
-				A1000010 /* Views */,
+				A1000038 /* Models */,
+				A1000039 /* Services */,
+				A100003A /* Views */,
 				A1000006 /* Assets.xcassets */,
-				A1000011 /* Preview Content */,
+				A100003B /* Preview Content */,
 			);
 			path = Syntrak;
 			sourceTree = "<group>";
@@ -80,37 +80,37 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A100000E /* Models */ = {
+		A1000038 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				A1000010 /* Activity.swift */,
-				A1000012 /* LocationPoint.swift */,
+				A1000027 /* Activity.swift */,
+				A1000029 /* LocationPoint.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
 		};
-		A100000F /* Services */ = {
+		A1000039 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				A1000014 /* LocationTracker.swift */,
-				A1000016 /* ActivityStore.swift */,
+				A100002B /* LocationTracker.swift */,
+				A100002D /* ActivityStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
 		};
-		A1000010 /* Views */ = {
+		A100003A /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				A1000018 /* HomeView.swift */,
-				A1000020 /* ActivityListView.swift */,
-				A1000022 /* ActivityDetailView.swift */,
-				A1000024 /* RecordActivityView.swift */,
-				A1000026 /* ProfileView.swift */,
+				A100002F /* HomeView.swift */,
+				A1000031 /* ActivityListView.swift */,
+				A1000033 /* ActivityDetailView.swift */,
+				A1000035 /* RecordActivityView.swift */,
+				A1000037 /* ProfileView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
 		};
-		A1000011 /* Preview Content */ = {
+		A100003B /* Preview Content */ = {
 			isa = PBXGroup;
 			children = (
 				A1000008 /* Preview Assets.xcassets */,
@@ -121,13 +121,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A100000E /* Syntrak */ = {
+		A100003C /* Syntrak */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A100001F /* Build configuration list for PBXNativeTarget "Syntrak" */;
+			buildConfigurationList = A1000045 /* Build configuration list for PBXNativeTarget "Syntrak" */;
 			buildPhases = (
-				A1000010 /* Sources */,
+				A100003D /* Sources */,
 				A100000A /* Frameworks */,
-				A1000011 /* Resources */,
+				A100003E /* Resources */,
 			);
 			buildRules = (
 			);
@@ -148,7 +148,7 @@
 				LastSwiftUpdateCheck = 1500;
 				LastUpgradeCheck = 1500;
 			};
-			buildConfigurationList = A1000020 /* Build configuration list for PBXProject "Syntrak" */;
+			buildConfigurationList = A1000044 /* Build configuration list for PBXProject "Syntrak" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -161,13 +161,13 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A100000E /* Syntrak */,
+				A100003C /* Syntrak */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A1000011 /* Resources */ = {
+		A100003E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -179,28 +179,28 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A1000010 /* Sources */ = {
+		A100003D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A1000003 /* ContentView.swift */,
 				A1000001 /* SyntrakApp.swift */,
 				A1000009 /* Activity.swift */,
-				A1000011 /* LocationPoint.swift */,
-				A1000013 /* LocationTracker.swift */,
-				A1000015 /* ActivityStore.swift */,
-				A1000017 /* HomeView.swift */,
-				A1000019 /* ActivityListView.swift */,
-				A1000021 /* ActivityDetailView.swift */,
-				A1000023 /* RecordActivityView.swift */,
-				A1000025 /* ProfileView.swift */,
+				A1000028 /* LocationPoint.swift */,
+				A100002A /* LocationTracker.swift */,
+				A100002C /* ActivityStore.swift */,
+				A100002E /* HomeView.swift */,
+				A1000030 /* ActivityListView.swift */,
+				A1000032 /* ActivityDetailView.swift */,
+				A1000034 /* RecordActivityView.swift */,
+				A1000036 /* ProfileView.swift */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		A1000021 /* Debug */ = {
+		A100003F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -263,7 +263,7 @@
 			};
 			name = Debug;
 		};
-		A1000022 /* Release */ = {
+		A1000040 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -319,7 +319,7 @@
 			};
 			name = Release;
 		};
-		A1000023 /* Debug */ = {
+		A1000041 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -349,7 +349,7 @@
 			};
 			name = Debug;
 		};
-		A1000024 /* Release */ = {
+		A1000042 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -382,20 +382,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A1000020 /* Build configuration list for PBXProject "Syntrak" */ = {
+		A1000044 /* Build configuration list for PBXProject "Syntrak" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1000021 /* Debug */,
-				A1000022 /* Release */,
+				A100003F /* Debug */,
+				A1000040 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A100001F /* Build configuration list for PBXNativeTarget "Syntrak" */ = {
+		A1000045 /* Build configuration list for PBXNativeTarget "Syntrak" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1000023 /* Debug */,
-				A1000024 /* Release */,
+				A1000041 /* Debug */,
+				A1000042 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -404,4 +404,3 @@
 	};
 	rootObject = A100000F /* Project object */;
 }
-
