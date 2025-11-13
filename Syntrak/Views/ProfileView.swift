@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @ObservedObject var activityStore: ActivityStore
+    @ObservedObject var authManager: AuthManager
     
     var body: some View {
         NavigationView {
@@ -12,9 +13,14 @@ struct ProfileView: View {
                         Image(systemName: "person.circle.fill")
                             .font(.system(size: 80))
                             .foregroundColor(.blue)
-                        Text("Syntrak User")
+                        Text(authManager.currentUser?.name ?? "Syntrak User")
                             .font(.title)
                             .fontWeight(.bold)
+                        if let email = authManager.currentUser?.email {
+                            Text(email)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .padding(.top, 20)
                     
@@ -59,10 +65,41 @@ struct ProfileView: View {
                         }
                     }
                     
+                    // Sign Out Button
+                    Button(action: {
+                        authManager.logout()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.right.square")
+                            Text("Sign Out")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 20)
+                    
                     Spacer()
                 }
             }
             .navigationTitle("Profile")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button(action: {
+                            authManager.logout()
+                        }) {
+                            Label("Sign Out", systemImage: "arrow.right.square")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
         }
     }
     

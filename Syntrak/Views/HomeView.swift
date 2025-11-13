@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject var activityStore: ActivityStore
+    @ObservedObject var authManager: AuthManager
     @State private var selectedTab = 0
     
     var body: some View {
@@ -48,7 +49,7 @@ struct HomeView: View {
                 }
                 .tag(6)
             
-            ProfileView(activityStore: activityStore)
+            ProfileView(activityStore: activityStore, authManager: authManager)
                 .tabItem {
                     Label("Profile", systemImage: "person.circle")
                 }

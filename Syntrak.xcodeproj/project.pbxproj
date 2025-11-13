@@ -26,6 +26,9 @@
 		A100004C /* CoachingView.swift */ = {isa = PBXBuildFile; fileRef = A100004D /* CoachingView.swift */; };
 		A100004E /* CommunityView.swift */ = {isa = PBXBuildFile; fileRef = A100004F /* CommunityView.swift */; };
 		A1000050 /* SplashView.swift */ = {isa = PBXBuildFile; fileRef = A1000051 /* SplashView.swift */; };
+		A1000052 /* AuthManager.swift */ = {isa = PBXBuildFile; fileRef = A1000053 /* AuthManager.swift */; };
+		A1000054 /* LoginView.swift */ = {isa = PBXBuildFile; fileRef = A1000055 /* LoginView.swift */; };
+		A1000056 /* SignUpView.swift */ = {isa = PBXBuildFile; fileRef = A1000057 /* SignUpView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +52,9 @@
 		A100004D /* CoachingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingView.swift; sourceTree = "<group>"; };
 		A100004F /* CommunityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityView.swift; sourceTree = "<group>"; };
 		A1000051 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		A1000053 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		A1000055 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		A1000057 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +112,7 @@
 			children = (
 				A100002B /* LocationTracker.swift */,
 				A100002D /* ActivityStore.swift */,
+				A1000053 /* AuthManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -124,6 +131,8 @@
 				A100004D /* CoachingView.swift */,
 				A100004F /* CommunityView.swift */,
 				A1000051 /* SplashView.swift */,
+				A1000055 /* LoginView.swift */,
+				A1000057 /* SignUpView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -207,6 +216,7 @@
 				A1000028 /* LocationPoint.swift */,
 				A100002A /* LocationTracker.swift */,
 				A100002C /* ActivityStore.swift */,
+				A1000052 /* AuthManager.swift */,
 				A100002E /* HomeView.swift */,
 				A1000030 /* ActivityListView.swift */,
 				A1000032 /* ActivityDetailView.swift */,
@@ -218,6 +228,8 @@
 				A100004C /* CoachingView.swift */,
 				A100004E /* CommunityView.swift */,
 				A1000050 /* SplashView.swift */,
+				A1000054 /* LoginView.swift */,
+				A1000056 /* SignUpView.swift */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
