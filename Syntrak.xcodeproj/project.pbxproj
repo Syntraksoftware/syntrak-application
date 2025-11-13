@@ -25,6 +25,7 @@
 		A100004A /* ExploreView.swift */ = {isa = PBXBuildFile; fileRef = A100004B /* ExploreView.swift */; };
 		A100004C /* CoachingView.swift */ = {isa = PBXBuildFile; fileRef = A100004D /* CoachingView.swift */; };
 		A100004E /* CommunityView.swift */ = {isa = PBXBuildFile; fileRef = A100004F /* CommunityView.swift */; };
+		A1000050 /* SplashView.swift */ = {isa = PBXBuildFile; fileRef = A1000051 /* SplashView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 		A100004B /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
 		A100004D /* CoachingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingView.swift; sourceTree = "<group>"; };
 		A100004F /* CommunityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityView.swift; sourceTree = "<group>"; };
+		A1000051 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +123,7 @@
 				A100004B /* ExploreView.swift */,
 				A100004D /* CoachingView.swift */,
 				A100004F /* CommunityView.swift */,
+				A1000051 /* SplashView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -214,6 +217,7 @@
 				A100004A /* ExploreView.swift */,
 				A100004C /* CoachingView.swift */,
 				A100004E /* CommunityView.swift */,
+				A1000050 /* SplashView.swift */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

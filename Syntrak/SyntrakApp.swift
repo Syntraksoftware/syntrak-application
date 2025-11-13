@@ -3,10 +3,15 @@ import SwiftUI
 @main
 struct SyntrakApp: App {
     @StateObject private var activityStore = ActivityStore()
+    @State private var showSplash = true
     
     var body: some Scene {
         WindowGroup {
-            HomeView(activityStore: activityStore)
+            if showSplash {
+                SplashView(showSplash: $showSplash)
+            } else {
+                HomeView(activityStore: activityStore)
+            }
         }
     }
 }
