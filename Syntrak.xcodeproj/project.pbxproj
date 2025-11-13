@@ -20,6 +20,11 @@
 		A1000032 /* ActivityDetailView.swift */ = {isa = PBXBuildFile; fileRef = A1000033 /* ActivityDetailView.swift */; };
 		A1000034 /* RecordActivityView.swift */ = {isa = PBXBuildFile; fileRef = A1000035 /* RecordActivityView.swift */; };
 		A1000036 /* ProfileView.swift */ = {isa = PBXBuildFile; fileRef = A1000037 /* ProfileView.swift */; };
+		A1000046 /* WorkoutsView.swift */ = {isa = PBXBuildFile; fileRef = A1000047 /* WorkoutsView.swift */; };
+		A1000048 /* RoutesView.swift */ = {isa = PBXBuildFile; fileRef = A1000049 /* RoutesView.swift */; };
+		A100004A /* ExploreView.swift */ = {isa = PBXBuildFile; fileRef = A100004B /* ExploreView.swift */; };
+		A100004C /* CoachingView.swift */ = {isa = PBXBuildFile; fileRef = A100004D /* CoachingView.swift */; };
+		A100004E /* CommunityView.swift */ = {isa = PBXBuildFile; fileRef = A100004F /* CommunityView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +42,11 @@
 		A1000033 /* ActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityDetailView.swift; sourceTree = "<group>"; };
 		A1000035 /* RecordActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordActivityView.swift; sourceTree = "<group>"; };
 		A1000037 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		A1000047 /* WorkoutsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutsView.swift; sourceTree = "<group>"; };
+		A1000049 /* RoutesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutesView.swift; sourceTree = "<group>"; };
+		A100004B /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
+		A100004D /* CoachingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingView.swift; sourceTree = "<group>"; };
+		A100004F /* CommunityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +116,11 @@
 				A1000033 /* ActivityDetailView.swift */,
 				A1000035 /* RecordActivityView.swift */,
 				A1000037 /* ProfileView.swift */,
+				A1000047 /* WorkoutsView.swift */,
+				A1000049 /* RoutesView.swift */,
+				A100004B /* ExploreView.swift */,
+				A100004D /* CoachingView.swift */,
+				A100004F /* CommunityView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -194,6 +209,11 @@
 				A1000032 /* ActivityDetailView.swift */,
 				A1000034 /* RecordActivityView.swift */,
 				A1000036 /* ProfileView.swift */,
+				A1000046 /* WorkoutsView.swift */,
+				A1000048 /* RoutesView.swift */,
+				A100004A /* ExploreView.swift */,
+				A100004C /* CoachingView.swift */,
+				A100004E /* CommunityView.swift */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

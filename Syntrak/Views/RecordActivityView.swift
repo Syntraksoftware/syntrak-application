@@ -8,16 +8,30 @@ struct RecordActivityView: View {
     @State private var selectedActivityType: ActivityType = .run
     @State private var timer: Timer?
     @State private var elapsedTime: TimeInterval = 0
+    @State private var cameraPosition: MapCameraPosition = .automatic
     
     var body: some View {
         NavigationView {
             ZStack {
                 // Map background
                 if let location = locationTracker.currentLocation {
-                    Map(coordinateRegion: .constant(MKCoordinateRegion(
-                        center: location.coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    )), showsUserLocation: true, userTrackingMode: .constant(.follow))
+                    Map(position: $cameraPosition) {
+                        UserAnnotation()
+                    }
+                    .onAppear {
+                        cameraPosition = .camera(MapCamera(
+                            centerCoordinate: location.coordinate,
+                            distance: 1000
+                        ))
+                    }
+                    .onChange(of: locationTracker.currentLocation) { oldValue, newValue in
+                        if let newLocation = newValue, locationTracker.isTracking {
+                            cameraPosition = .camera(MapCamera(
+                                centerCoordinate: newLocation.coordinate,
+                                distance: 1000
+                            ))
+                        }
+                    }
                     .ignoresSafeArea()
                 } else {
                     Color(.systemGray6)

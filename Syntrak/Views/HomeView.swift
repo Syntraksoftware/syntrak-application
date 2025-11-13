@@ -18,11 +18,41 @@ struct HomeView: View {
                 }
                 .tag(1)
             
+            WorkoutsView()
+                .tabItem {
+                    Label("Workouts", systemImage: "figure.run")
+                }
+                .tag(2)
+            
+            RoutesView()
+                .tabItem {
+                    Label("Routes", systemImage: "map")
+                }
+                .tag(3)
+            
+            ExploreView()
+                .tabItem {
+                    Label("Explore", systemImage: "magnifyingglass")
+                }
+                .tag(4)
+            
+            CoachingView()
+                .tabItem {
+                    Label("Coaching", systemImage: "person.2")
+                }
+                .tag(5)
+            
+            CommunityView()
+                .tabItem {
+                    Label("Community", systemImage: "person.3")
+                }
+                .tag(6)
+            
             ProfileView(activityStore: activityStore)
                 .tabItem {
                     Label("Profile", systemImage: "person.circle")
                 }
-                .tag(2)
+                .tag(7)
         }
     }
 }
