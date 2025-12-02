@@ -1,0 +1,46 @@
+name: syntrak
+description: A fitness tracking app similar to Strava
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # Networking
+  http: ^1.1.0
+  dio: ^5.4.0
+
+  # Location
+  geolocator: ^10.1.0
+  permission_handler: ^11.1.0
+
+  # Maps
+  google_maps_flutter: ^2.5.0
+  flutter_polyline_points: ^2.0.0
+
+  # Storage
+  shared_preferences: ^2.2.2
+
+  # UI
+  cupertino_icons: ^1.0.6
+  intl: ^0.18.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/logos/
+
