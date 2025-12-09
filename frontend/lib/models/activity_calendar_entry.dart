@@ -4,7 +4,7 @@ class ActivityCalendarEntry {
   final DateTime date;
   final int activityCount;
   final double totalDistance; // meters
-  final int totalDuration; // seconds
+  final int totalDuration; // kept in seconds, conversion to be done in frontend
   final String? lastActivityId;
   final List<Activity> activities;
 
