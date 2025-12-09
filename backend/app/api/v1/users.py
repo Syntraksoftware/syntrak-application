@@ -10,7 +10,7 @@ from app.api.dependencies import get_current_user
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.GET("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserResponse)
 def get_current_user_profile(current_user: User = Depends(get_current_user)) -> UserResponse:
     """
     Get current authenticated user's profile.
@@ -25,7 +25,7 @@ def get_current_user_profile(current_user: User = Depends(get_current_user)) -> 
     )
 
 
-@router.PUT("/me", response_model=UserResponse)
+@router.put("/me", response_model=UserResponse)
 def update_current_user_profile(
     user_update: UserUpdate,
     current_user: User = Depends(get_current_user),
