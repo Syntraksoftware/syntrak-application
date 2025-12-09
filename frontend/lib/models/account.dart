@@ -1,9 +1,8 @@
-import 'package:syntrak/models/user.dart';
+
 
 enum AccountPlan { //.maybe? optional for subscription purposes
   free,
   pro,
-  team,
 }
 
 extension AccountPlanExtension on AccountPlan { // extension for conversion between AccountPlan enum and string
@@ -13,8 +12,6 @@ extension AccountPlanExtension on AccountPlan { // extension for conversion betw
         return 'free';
       case AccountPlan.pro:
         return 'pro';
-      case AccountPlan.team:
-        return 'team';
     }
   }
 
@@ -22,8 +19,6 @@ extension AccountPlanExtension on AccountPlan { // extension for conversion betw
     switch (value) {
       case 'pro':
         return AccountPlan.pro;
-      case 'team':
-        return AccountPlan.team;
       default:
         return AccountPlan.free;
     }
@@ -72,7 +67,7 @@ extension AccountStatusExtension on AccountStatus { // extension for conversion 
 
 class Account {
   final String id; // account uuid
-  final String ownerUserId; // id of account owner
+  final String userId; // id of account owner
   final String? firstName; //personally think should be required but just aligning with register_screen
   final String? lastName; //personally think should be required but just aligning with register_screen
   final AccountPlan plan;
@@ -83,11 +78,10 @@ class Account {
   final DateTime? renewsAt;
   final DateTime? cancelAt;
   final DateTime? updatedAt;
-  final User? owner; // owner object btw maybe can make team owner have limited access to member accounts? just saying
 
   Account({
     required this.id,
-    required this.ownerUserId,
+    required this.userId,
     this.firstName,
     this.lastName,
     required this.plan,
@@ -98,7 +92,6 @@ class Account {
     this.renewsAt,
     this.cancelAt,
     this.updatedAt,
-    this.owner,
   });
 
   bool get isActive => status == AccountStatus.active || status == AccountStatus.trialing;
@@ -106,7 +99,7 @@ class Account {
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
       id: json['id'],
-      ownerUserId: json['owner_user_id'],
+      userId: json['user_id'],
       firstName: json['first_name'],
       lastName: json['last_name'],
       plan: AccountPlanExtension.fromString(json['plan'] ?? 'free'),
@@ -117,14 +110,13 @@ class Account {
       renewsAt: json['renews_at'] != null ? DateTime.parse(json['renews_at']) : null,
       cancelAt: json['cancel_at'] != null ? DateTime.parse(json['cancel_at']) : null,
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
-      owner: json['owner'] != null ? User.fromJson(json['owner']) : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'owner_user_id': ownerUserId,
+      'user_id': userId,
       'first_name': firstName,
       'last_name': lastName,
       'plan': plan.value,
@@ -135,7 +127,6 @@ class Account {
       'renews_at': renewsAt?.toIso8601String(),
       'cancel_at': cancelAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
-      'owner': owner?.toJson(),
     };
   }
 }
