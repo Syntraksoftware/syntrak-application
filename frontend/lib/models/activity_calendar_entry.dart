@@ -29,7 +29,7 @@ class ActivityCalendarEntry {
       activities: (json['activities'] as List<dynamic>?) // maping list of activity jsons to list of Activity objects
               ?.map((activityJson) => Activity.fromJson(activityJson))
               .toList() ??
-          const [],
+          const [], // fallback to empty list to prevent null entries in container (ActivityCalendar)
     );
   }
 
