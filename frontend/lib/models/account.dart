@@ -1,5 +1,3 @@
-
-
 enum AccountPlan { //.maybe? optional for subscription purposes
   free,
   pro,
