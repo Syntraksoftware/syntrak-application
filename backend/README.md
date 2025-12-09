@@ -53,8 +53,11 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 ### Login
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "email=test@example.com&password=password123"
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
 ```
 
 Returns:
