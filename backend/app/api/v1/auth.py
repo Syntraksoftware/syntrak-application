@@ -2,7 +2,7 @@
 Authentication API endpoints.
 Handles registration, login, and token refresh.
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Form
 from datetime import datetime, timedelta
 from app.schemas import UserCreate, LoginRequest, RefreshTokenRequest, AuthSession, ErrorResponse, UserResponse
 from app.core.storage import User, user_store
@@ -14,7 +14,7 @@ from jose import JWTError
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.POST(
+@router.post(
     "/register",
     response_model=AuthSession,
     status_code=status.HTTP_201_CREATED,
@@ -55,7 +55,7 @@ def register(user_data: UserCreate) -> AuthSession:
     return _create_session(user)
 
 
-@router.POST(
+@router.post(
     "/login",
     response_model=AuthSession,
     responses={
@@ -63,19 +63,23 @@ def register(user_data: UserCreate) -> AuthSession:
         403: {"model": ErrorResponse, "description": "Account disabled"},
     }
 )
-def login(credentials: LoginRequest) -> AuthSession:
+def login(
+    email: str = Form(...),
+    password: str = Form(...),
+) -> AuthSession:
     """
     Authenticate user and obtain tokens.
     
+    Accepts form data:
     - **email**: Registered email address
     - **password**: User password
     
     Returns authentication session with access/refresh tokens.
     """
     # Find user
-    user = user_store.get_by_email(credentials.email)
+    user = user_store.get_by_email(email)
     
-    if not user or not verify_password(credentials.password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
@@ -94,7 +98,7 @@ def login(credentials: LoginRequest) -> AuthSession:
     return _create_session(user)
 
 
-@router.POST(
+@router.post(
     "/refresh",
     response_model=AuthSession,
     responses={
