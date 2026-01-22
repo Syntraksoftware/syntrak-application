@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  main-backend:
+    build:
+      context: ./main-backend
+      dockerfile: Dockerfile
+    container_name: syntrak-main-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./main-backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+    networks:
+      - syntrak-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  community-backend:
+    build:
+      context: ./community-backend
+      dockerfile: Dockerfile
+    container_name: syntrak-community-backend
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./community-backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5001
+    networks:
+      - syntrak-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  activity-backend:
+    build:
+      context: ./activity-backend
+      dockerfile: Dockerfile
+    container_name: syntrak-activity-backend
+    ports:
+      - "5100:5100"
+    env_file:
+      - ./activity-backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5100
+    networks:
+      - syntrak-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5100/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  syntrak-network:
+    driver: bridge
