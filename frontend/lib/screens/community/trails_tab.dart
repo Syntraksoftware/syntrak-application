@@ -28,6 +28,11 @@ class _TrailsTabState extends State<TrailsTab> {
         _isSearchFocused = _searchFocusNode.hasFocus;
       });
     });
+    _searchController.addListener(() {
+      setState(() {
+        // Trigger rebuild when text changes to update clear button
+      });
+    });
   }
 
   @override
@@ -243,73 +248,113 @@ class _TrailsTabState extends State<TrailsTab> {
     );
   }
 
-  // Search bar - FIXED at top
+  // Modern search bar at top
   Widget _buildSearchBar() {
+    final hasText = _searchController.text.isNotEmpty;
+
     return Container(
-      color: SyntrakColors.surface,
-      padding: const EdgeInsets.fromLTRB(
-        SyntrakSpacing.md,
-        SyntrakSpacing.md,
-        SyntrakSpacing.md,
-        SyntrakSpacing.sm,
+      decoration: BoxDecoration(
+        color: SyntrakColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: _isSearchFocused
-              ? SyntrakColors.surface
-              : SyntrakColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(SyntrakRadius.round),
-          border: Border.all(
-            color:
-                _isSearchFocused ? SyntrakColors.primary : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: _isSearchFocused
-              ? [
-                  BoxShadow(
-                    color: SyntrakColors.primary.withAlpha(30),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: TextField(
-          controller: _searchController,
-          focusNode: _searchFocusNode,
-          onChanged: (_) => _filterTrails(),
-          style: SyntrakTypography.bodyMedium.copyWith(
-            color: SyntrakColors.textPrimary,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Search trails, resorts...',
-            hintStyle: SyntrakTypography.bodyMedium.copyWith(
-              color: SyntrakColors.textTertiary,
-            ),
-            prefixIcon: Icon(
-              Icons.search,
+      padding: const EdgeInsets.symmetric(
+        horizontal: SyntrakSpacing.md,
+        vertical: SyntrakSpacing.sm,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(SyntrakRadius.lg),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          height: 48,
+          decoration: BoxDecoration(
+            color: _isSearchFocused
+                ? SyntrakColors.surface
+                : SyntrakColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(SyntrakRadius.lg),
+            border: Border.all(
               color: _isSearchFocused
                   ? SyntrakColors.primary
-                  : SyntrakColors.textTertiary,
+                  : SyntrakColors.divider,
+              width: _isSearchFocused ? 1.5 : 1,
             ),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      color: SyntrakColors.textSecondary,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      _filterTrails();
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: SyntrakSpacing.md,
-              vertical: 14,
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              inputDecorationTheme: InputDecorationTheme(
+                fillColor: Colors.transparent,
+                filled: false,
+              ),
+              focusColor: Colors.transparent,
+              hoverColor: Colors.transparent,
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+            ),
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              onChanged: (_) => _filterTrails(),
+              style: SyntrakTypography.bodyMedium.copyWith(
+                color: SyntrakColors.textPrimary,
+                height: 1.5, // Ensure consistent line height
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search trails, resorts...',
+                hintStyle: SyntrakTypography.bodyMedium.copyWith(
+                  color: SyntrakColors.textTertiary,
+                  height: 1.5, // Match text line height
+                ),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 4.0),
+                  child: Icon(
+                    Icons.search_rounded,
+                    color: _isSearchFocused
+                        ? SyntrakColors.primary
+                        : SyntrakColors.textTertiary,
+                    size: 20,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 48,
+                ),
+                suffixIcon: hasText
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear_rounded,
+                          color: SyntrakColors.textSecondary,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterTrails();
+                          _searchFocusNode.unfocus();
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
+                      )
+                    : null,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: SyntrakSpacing.md,
+                  vertical: 14,
+                ),
+                isDense: false, // Changed to false for better alignment
+              ),
+              cursorColor: SyntrakColors.primary,
+              showCursor: true,
             ),
           ),
         ),
