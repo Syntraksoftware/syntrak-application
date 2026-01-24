@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:syntrak/core/theme.dart';
 import 'package:syntrak/providers/auth_provider.dart';
 import 'package:syntrak/models/post.dart';
+import 'package:syntrak/services/api_service.dart';
 import 'package:syntrak/widgets/compact_composer.dart';
 import 'package:syntrak/widgets/message_card.dart';
 
@@ -24,6 +25,7 @@ class _ThreadsTabState extends State<ThreadsTab> {
   bool _isLoading = false;
   bool _isSearchFocused = false;
   String? _expandedPostId;
+  String? _defaultSubthreadId;
 
   @override
   void initState() {
@@ -64,6 +66,91 @@ class _ThreadsTabState extends State<ThreadsTab> {
     });
   }
 
+  Post _mapBackendPostToFrontendPost(Map<String, dynamic> backendPost) {
+    final authorFirstName = backendPost['author_first_name'] as String?;
+    final authorLastName = backendPost['author_last_name'] as String?;
+    final authorEmail = backendPost['author_email'] as String? ?? '';
+
+    String displayName;
+    if (authorFirstName != null && authorLastName != null) {
+      displayName = '$authorFirstName $authorLastName';
+    } else if (authorFirstName != null) {
+      displayName = authorFirstName;
+    } else {
+      displayName = authorEmail.split('@').first;
+    }
+
+    final username = authorEmail.split('@').first;
+
+    DateTime createdAt;
+    try {
+      createdAt = DateTime.parse(backendPost['created_at'] as String);
+    } catch (_) {
+      createdAt = DateTime.now();
+    }
+
+    final diff = DateTime.now().difference(createdAt);
+    final timestampLabel = diff.inMinutes < 1
+        ? 'now'
+        : diff.inHours < 1
+            ? '${diff.inMinutes}m'
+            : diff.inDays < 1
+                ? '${diff.inHours}h'
+                : '${diff.inDays}d';
+
+    final text = backendPost['content'] as String? ?? '';
+
+    return Post(
+      id: backendPost['post_id'] as String? ?? '',
+      author: PostAuthor(
+        id: backendPost['user_id'] as String? ?? '',
+        displayName: displayName,
+        username: username,
+        avatarUrl: null,
+      ),
+      text: text,
+      createdAt: createdAt,
+      timestampLabel: timestampLabel,
+      likeCount: 0,
+      replyCount: 0,
+      repostCount: 0,
+      likedByCurrentUser: false,
+      repostedByCurrentUser: false,
+    );
+  }
+
+  Future<String?> _getOrCreateDefaultSubthread() async {
+    if (_defaultSubthreadId != null) return _defaultSubthreadId;
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final apiService = ApiService();
+      apiService.setToken(authProvider.session?.accessToken);
+
+      final subthreads = await apiService.getSubthreads(limit: 10);
+
+      Map<String, dynamic>? chosen;
+      for (final s in subthreads) {
+        final name = (s['name'] as String? ?? '').toLowerCase();
+        if (name == 'general' || name == 'main' || name == 'all') {
+          chosen = s;
+          break;
+        }
+      }
+      if (chosen == null && subthreads.isNotEmpty) {
+        chosen = subthreads.first;
+      }
+
+      if (chosen != null) {
+        _defaultSubthreadId = chosen['id'] as String?;
+        return _defaultSubthreadId;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _loadFeed() async {
     if (_isLoading) return;
 
@@ -72,13 +159,38 @@ class _ThreadsTabState extends State<ThreadsTab> {
     });
 
     try {
-      // TODO: Fetch from community backend API
-      await Future.delayed(const Duration(milliseconds: 500));
+      final subthreadId = await _getOrCreateDefaultSubthread();
+      if (!mounted) return;
+
+      if (subthreadId == null) {
+        if (mounted) {
+          setState(() {
+            _posts.clear();
+            _posts.addAll(_generateMockPosts());
+            _filteredPosts = List.from(_posts);
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final apiService = ApiService();
+      apiService.setToken(authProvider.session?.accessToken);
+
+      final postsData = await apiService.getPostsBySubthread(
+        subthreadId,
+        limit: 20,
+        offset: 0,
+      );
 
       if (mounted) {
+        final posts = postsData
+            .map((p) => _mapBackendPostToFrontendPost(p))
+            .toList();
         setState(() {
           _posts.clear();
-          _posts.addAll(_generateMockPosts());
+          _posts.addAll(posts);
           _filteredPosts = List.from(_posts);
           _isLoading = false;
         });
@@ -88,6 +200,9 @@ class _ThreadsTabState extends State<ThreadsTab> {
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load posts: ${e.toString()}')),
+        );
       }
     }
   }
@@ -108,32 +223,88 @@ class _ThreadsTabState extends State<ThreadsTab> {
     }
   }
 
-  void _handlePost(String text) {
+  Future<void> _handlePost(String text) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.user;
 
-    if (user == null) return;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to post')),
+      );
+      return;
+    }
 
-    final newPost = Post(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      author: PostAuthor(
-        id: user.id,
-        displayName: user.firstName != null && user.lastName != null
-            ? '${user.firstName} ${user.lastName}'
-            : user.email.split('@')[0],
-        username: user.email.split('@')[0],
-        avatarUrl: null,
-      ),
-      text: text,
-      createdAt: DateTime.now(),
-      timestampLabel: 'now',
-    );
+    final subthreadId = await _getOrCreateDefaultSubthread();
+    if (!mounted) return;
+    if (subthreadId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No subthread available. Please try again later.')),
+      );
+      return;
+    }
 
     setState(() {
-      _posts.insert(0, newPost);
+      _isLoading = true;
     });
 
-    // TODO: Post to backend API
+    try {
+      final apiService = ApiService();
+      apiService.setToken(authProvider.session?.accessToken);
+
+      final response = await apiService.createCommunityPost(
+        subthreadId: subthreadId,
+        title: text.length > 50 ? text.substring(0, 50) : text,
+        content: text,
+      );
+
+      // Create response has no author_*; use current user for author.
+      DateTime createdAt;
+      try {
+        createdAt = DateTime.parse(response['created_at'] as String);
+      } catch (_) {
+        createdAt = DateTime.now();
+      }
+      final newPost = Post(
+        id: response['post_id'] as String? ?? '',
+        author: PostAuthor(
+          id: user.id,
+          displayName: user.firstName != null && user.lastName != null
+              ? '${user.firstName} ${user.lastName}'
+              : user.email.split('@').first,
+          username: user.email.split('@').first,
+          avatarUrl: null,
+        ),
+        text: response['content'] as String? ?? text,
+        createdAt: createdAt,
+        timestampLabel: 'now',
+        likeCount: 0,
+        replyCount: 0,
+        repostCount: 0,
+        likedByCurrentUser: false,
+        repostedByCurrentUser: false,
+      );
+
+      if (mounted) {
+        setState(() {
+          _posts.insert(0, newPost);
+          _filteredPosts = List.from(_posts);
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post created successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create post: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   void _handleLike(Post post) {

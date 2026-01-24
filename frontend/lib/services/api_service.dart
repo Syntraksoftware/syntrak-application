@@ -105,7 +105,29 @@ class ApiService {
   Future<Profile> uploadAvatar(File imageFile) =>
       _profileApi.uploadAvatar(imageFile);
 
-  // Community (posts) 
+  // Community (posts)
+  Future<Map<String, dynamic>> createCommunityPost({
+    required String subthreadId,
+    required String title,
+    required String content,
+  }) =>
+      _communityApi.createPost(
+        subthreadId: subthreadId,
+        title: title,
+        content: content,
+      );
+
+  Future<List<Map<String, dynamic>>> getPostsBySubthread(
+    String subthreadId, {
+    int limit = 20,
+    int offset = 0,
+  }) =>
+      _communityApi.getPostsBySubthread(subthreadId,
+          limit: limit, offset: offset);
+
+  Future<List<Map<String, dynamic>>> getSubthreads({int limit = 50}) =>
+      _communityApi.getSubthreads(limit: limit);
+
   Future<List<Map<String, dynamic>>> getPostsByUserId(
     String userId, {
     int limit = 20,

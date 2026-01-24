@@ -8,11 +8,14 @@ services:
     container_name: syntrak-main-backend
     ports:
       - "8080:8080"
+    volumes:
+      - ./main-backend:/app
     env_file:
       - ./main-backend/.env
     environment:
       - HOST=0.0.0.0
       - PORT=8080
+      - DEBUG=true
     networks:
       - syntrak-network
     healthcheck:
@@ -30,11 +33,14 @@ services:
     container_name: syntrak-community-backend
     ports:
       - "5001:5001"
+    volumes:
+      - ./community-backend:/app
     env_file:
       - ./community-backend/.env
     environment:
       - HOST=0.0.0.0
       - PORT=5001
+      - FASTAPI_ENV=development
     networks:
       - syntrak-network
     healthcheck:
@@ -52,11 +58,14 @@ services:
     container_name: syntrak-activity-backend
     ports:
       - "5100:5100"
+    volumes:
+      - ./activity-backend:/app
     env_file:
       - ./activity-backend/.env
     environment:
       - HOST=0.0.0.0
       - PORT=5100
+      - FASTAPI_ENV=development
     networks:
       - syntrak-network
     healthcheck:
