@@ -1,15 +1,17 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:syntrak/core/theme.dart';
 import 'package:syntrak/providers/auth_provider.dart';
 import 'package:syntrak/models/post.dart';
 import 'package:syntrak/services/api_service.dart';
-import 'package:syntrak/widgets/compact_composer.dart';
 import 'package:syntrak/widgets/message_card.dart';
 
 class ThreadsTab extends StatefulWidget {
-  const ThreadsTab({super.key});
+  final ValueListenable<int>? refreshTrigger;
+
+  const ThreadsTab({super.key, this.refreshTrigger});
 
   @override
   State<ThreadsTab> createState() => _ThreadsTabState();
@@ -30,6 +32,7 @@ class _ThreadsTabState extends State<ThreadsTab> {
   @override
   void initState() {
     super.initState();
+    widget.refreshTrigger?.addListener(_onRefreshTriggered);
     _searchFocusNode.addListener(() {
       setState(() {
         _isSearchFocused = _searchFocusNode.hasFocus;
@@ -43,8 +46,13 @@ class _ThreadsTabState extends State<ThreadsTab> {
     _loadFeed();
   }
 
+  void _onRefreshTriggered() {
+    _loadFeed();
+  }
+
   @override
   void dispose() {
+    widget.refreshTrigger?.removeListener(_onRefreshTriggered);
     _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -223,90 +231,6 @@ class _ThreadsTabState extends State<ThreadsTab> {
     }
   }
 
-  Future<void> _handlePost(String text) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.user;
-
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to post')),
-      );
-      return;
-    }
-
-    final subthreadId = await _getOrCreateDefaultSubthread();
-    if (!mounted) return;
-    if (subthreadId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No subthread available. Please try again later.')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final apiService = ApiService();
-      apiService.setToken(authProvider.session?.accessToken);
-
-      final response = await apiService.createCommunityPost(
-        subthreadId: subthreadId,
-        title: text.length > 50 ? text.substring(0, 50) : text,
-        content: text,
-      );
-
-      // Create response has no author_*; use current user for author.
-      DateTime createdAt;
-      try {
-        createdAt = DateTime.parse(response['created_at'] as String);
-      } catch (_) {
-        createdAt = DateTime.now();
-      }
-      final newPost = Post(
-        id: response['post_id'] as String? ?? '',
-        author: PostAuthor(
-          id: user.id,
-          displayName: user.firstName != null && user.lastName != null
-              ? '${user.firstName} ${user.lastName}'
-              : user.email.split('@').first,
-          username: user.email.split('@').first,
-          avatarUrl: null,
-        ),
-        text: response['content'] as String? ?? text,
-        createdAt: createdAt,
-        timestampLabel: 'now',
-        likeCount: 0,
-        replyCount: 0,
-        repostCount: 0,
-        likedByCurrentUser: false,
-        repostedByCurrentUser: false,
-      );
-
-      if (mounted) {
-        setState(() {
-          _posts.insert(0, newPost);
-          _filteredPosts = List.from(_posts);
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post created successfully!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create post: ${e.toString()}')),
-        );
-      }
-    }
-  }
-
   void _handleLike(Post post) {
     setState(() {
       final index = _posts.indexWhere((p) => p.id == post.id);
@@ -436,18 +360,9 @@ class _ThreadsTabState extends State<ThreadsTab> {
                 horizontal: SyntrakSpacing.md,
                 vertical: SyntrakSpacing.sm,
               ),
-              itemCount: _filteredPosts.length + 1,
+              itemCount: _filteredPosts.length,
               itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: SyntrakSpacing.md),
-                    child: CompactComposer(
-                      onPost: _handlePost,
-                      maxCharacters: 280,
-                    ),
-                  );
-                }
-                final post = _filteredPosts[index - 1];
+                final post = _filteredPosts[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: SyntrakSpacing.sm),
                   child: MessageCard(

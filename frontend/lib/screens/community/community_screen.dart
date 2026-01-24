@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:syntrak/core/theme.dart';
+import 'package:syntrak/screens/community/new_thread_screen.dart';
 import 'package:syntrak/screens/community/threads_tab.dart';
 import 'package:syntrak/screens/community/trails_tab.dart';
 
@@ -13,6 +14,7 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ValueNotifier<int> _threadsRefresh = ValueNotifier(0);
 
   @override
   void initState() {
@@ -23,7 +25,18 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _threadsRefresh.dispose();
     super.dispose();
+  }
+
+  void _openNewThread() {
+    Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => NewThreadScreen(
+          onPostCreated: () => _threadsRefresh.value++,
+        ),
+      ),
+    );
   }
 
   @override
@@ -35,7 +48,13 @@ class _CommunityScreenState extends State<CommunityScreen>
         elevation: 0,
         backgroundColor: SyntrakColors.surface,
         foregroundColor: SyntrakColors.textPrimary,
-        actions: const [],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _openNewThread,
+            tooltip: 'New thread',
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
           child: Container(
@@ -76,9 +95,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          ThreadsTab(),
-          TrailsTab(),
+        children: [
+          ThreadsTab(refreshTrigger: _threadsRefresh),
+          const TrailsTab(),
         ],
       ),
     );
