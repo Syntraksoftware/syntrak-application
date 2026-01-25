@@ -4,7 +4,7 @@ import 'package:syntrak/core/theme.dart';
 import 'package:syntrak/providers/auth_provider.dart';
 import 'package:syntrak/services/api_service.dart';
 
-/// Full-screen composer for creating a new thread/post. Layout matches the
+/// Composer for creating a new thread/post. Layout matches the
 /// "New thread" reference: Cancel (single line), topic, body, media row,
 /// Add to thread, Reply options + toggle + Post. Connects to community backend.
 class NewThreadScreen extends StatefulWidget {
@@ -118,30 +118,28 @@ class _NewThreadScreenState extends State<NewThreadScreen> {
     final muted =
         isDark ? SyntrakColors.darkTextSecondary : SyntrakColors.textTertiary;
 
-    // Cancel: single line, plain text, no wrap. Use leadingWidth + minimal leading.
+    // Cancel: fully visible, single line. leadingWidth gives enough space to avoid truncation.
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
-        leadingWidth: 76,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Center(
+        leadingWidth: 88,
+        leading: Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () => Navigator.of(context).pop(),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                   child: Text(
                     'Cancel',
                     style: SyntrakTypography.bodyLarge.copyWith(
                       color: onSurf,
                       fontWeight: FontWeight.w500,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
                   ),
                 ),
               ),
@@ -183,128 +181,148 @@ class _NewThreadScreenState extends State<NewThreadScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              // —— Composer: avatar | thread line | username > Add a topic + What's new?
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Avatar + short vertical line
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: muted.withAlpha(100),
-                        child: user?.firstName != null &&
-                                user!.firstName!.isNotEmpty
-                            ? Text(
-                                user.firstName![0].toUpperCase(),
-                                style: TextStyle(
-                                  color: onSurf,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              )
-                            : Icon(Icons.person, color: muted, size: 20),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: 2,
-                        height: 32,
-                        color: muted.withAlpha(100),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 14),
-                  // Topic + body
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // —— Composer: avatar + vertical line (left) | topic, body, media (right)
+              // IntrinsicHeight so the line stretches to the bottom of the media bar
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Avatar + vertical line (line ends at same level as media bar)
+                    Column(
+                      mainAxisSize: MainAxisSize.max,
                       children: [
-                        // username > Add a topic (one line)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              username.isNotEmpty ? '$username > ' : '',
-                              style: SyntrakTypography.bodyLarge.copyWith(
-                                color: onSurf,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Expanded(
-                              child: TextField(
-                                controller: _titleController,
-                                onChanged: (_) => setState(() {}),
-                                maxLines: 1,
-                                style: SyntrakTypography.bodyLarge.copyWith(
-                                  color: onSurf,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Add a topic',
-                                  hintStyle: SyntrakTypography.bodyLarge
-                                      .copyWith(color: muted),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                  isDense: true,
-                                ),
-                              ),
-                            ),
-                          ],
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: muted.withAlpha(100),
+                          child: user?.firstName != null &&
+                                  user!.firstName!.isNotEmpty
+                              ? Text(
+                                  user.firstName![0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: onSurf,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                )
+                              : Icon(Icons.person, color: muted, size: 20),
                         ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: _bodyController,
-                          onChanged: (_) => setState(() {}),
-                          maxLines: 6,
-                          minLines: 2,
-                          style: SyntrakTypography.bodyLarge.copyWith(
-                            color: onSurf,
-                            height: 1.4,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: "What's new?",
-                            hintStyle: SyntrakTypography.bodyLarge.copyWith(
-                              color: muted,
-                              height: 1.4,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            isDense: true,
-                            alignLabelWithHint: true,
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: Container(
+                            width: 2,
+                            color: muted.withAlpha(100),
                           ),
                         ),
                       ],
                     ),
+                  const SizedBox(width: 14),
+                  // Topic, body, and media row — topic is offset so its center aligns with avatar center
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // username > uses same InputDecoration as topic/body so it aligns
+                          if (username.isNotEmpty) ...[
+                            InputDecorator(
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                isCollapsed: true,
+                                contentPadding: EdgeInsets.zero,
+                                isDense: true,
+                              ),
+                              child: Text(
+                                '$username > ',
+                                style: SyntrakTypography.bodyLarge.copyWith(
+                                  color: onSurf,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          TextField(
+                            controller: _titleController,
+                            onChanged: (_) => setState(() {}),
+                            maxLines: 1,
+                            style: SyntrakTypography.bodyLarge.copyWith(
+                              color: onSurf,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Add a topic',
+                              hintStyle: SyntrakTypography.bodyLarge
+                                  .copyWith(color: muted),
+                              border: InputBorder.none,
+                              isCollapsed: true,
+                              contentPadding: EdgeInsets.zero,
+                              isDense: true,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: _bodyController,
+                            onChanged: (_) => setState(() {}),
+                            maxLines: 6,
+                            minLines: 2,
+                            style: SyntrakTypography.bodyLarge.copyWith(
+                              color: onSurf,
+                              height: 1.4,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "What's new?",
+                              hintStyle: SyntrakTypography.bodyLarge.copyWith(
+                                color: muted,
+                                height: 1.4,
+                              ),
+                              border: InputBorder.none,
+                              isCollapsed: true,
+                              contentPadding: EdgeInsets.zero,
+                              isDense: true,
+                              alignLabelWithHint: true,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Media row: line and media bar share the same bottom
+                          // Image, GIF, List, Quote, More (beside the vertical line)
+                          Row(
+                            children: [
+                              _MediaIcon(
+                                icon: Icons.image_outlined,
+                                onTap: () =>
+                                    _snack('Image upload coming soon'),
+                                padding: const EdgeInsets.only(
+                                    right: 6, top: 6, bottom: 6),
+                              ),
+                              const SizedBox(width: 2),
+                              _MediaIcon(
+                                  icon: Icons.gif_outlined,
+                                  label: 'GIF',
+                                  onTap: () =>
+                                      _snack('GIF picker coming soon')),
+                              const SizedBox(width: 2),
+                              _MediaIcon(
+                                  icon: Icons.format_list_bulleted,
+                                  onTap: () => _snack('Lists coming soon')),
+                              const SizedBox(width: 2),
+                              _MediaIcon(
+                                  icon: Icons.format_quote_outlined,
+                                  onTap: () => _snack('Quote coming soon')),
+                              const SizedBox(width: 2),
+                              _MediaIcon(
+                                  icon: Icons.more_horiz,
+                                  onTap: () =>
+                                      _snack('More options coming soon')),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
+                )
               ),
-              const SizedBox(height: 16),
-              // —— Media row: Image, GIF, List, Quote, More
-              Row(
-                children: [
-                  _MediaIcon(
-                      icon: Icons.image_outlined,
-                      onTap: () => _snack('Image upload coming soon')),
-                  const SizedBox(width: 2),
-                  _MediaIcon(
-                      icon: Icons.gif_outlined,
-                      label: 'GIF',
-                      onTap: () => _snack('GIF picker coming soon')),
-                  const SizedBox(width: 2),
-                  _MediaIcon(
-                      icon: Icons.format_list_bulleted,
-                      onTap: () => _snack('Lists coming soon')),
-                  const SizedBox(width: 2),
-                  _MediaIcon(
-                      icon: Icons.format_quote_outlined,
-                      onTap: () => _snack('Quote coming soon')),
-                  const SizedBox(width: 2),
-                  _MediaIcon(
-                      icon: Icons.more_horiz,
-                      onTap: () => _snack('More options coming soon')),
-                ],
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               // —— Add to thread (small line + person icon + text)
               Material(
                 color: Colors.transparent,
@@ -400,21 +418,29 @@ class _MediaIcon extends StatelessWidget {
   final IconData icon;
   final String? label;
   final VoidCallback onTap;
+  final EdgeInsets? padding;
 
-  const _MediaIcon({required this.icon, this.label, required this.onTap});
+  const _MediaIcon({
+    required this.icon,
+    this.label,
+    required this.onTap,
+    this.padding,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c =
         isDark ? SyntrakColors.darkTextSecondary : SyntrakColors.textTertiary;
+    final pad = padding ??
+        const EdgeInsets.symmetric(horizontal: 6, vertical: 6);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          padding: pad,
           child: label != null
               ? Row(
                   mainAxisSize: MainAxisSize.min,
