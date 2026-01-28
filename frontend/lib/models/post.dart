@@ -64,11 +64,13 @@ class PostAuthor {
   final String displayName;
   final String username;
   final String? avatarUrl;
+  final bool isVerified;
 
   PostAuthor({
     required this.id,
     required this.displayName,
     required this.username,
     this.avatarUrl,
+    this.isVerified = false,
   });
 }

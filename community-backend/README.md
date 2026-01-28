@@ -5,17 +5,18 @@ A standalone Flask backend for the community feature (Reddit-like functionality)
 ## Overview
 
 This is a separate Flask-based microservice handling all community operations:
+
 - Subthreads (topic categories)
 - Posts (user content)
 - Comments (with nesting support)
 
 ## Features
 
-- 🔥 Flask REST API
-- 🗄️ Supabase integration
-- 🔐 JWT authentication
-- 📝 Complete CRUD operations
-- 🎯 Self-contained and deployable
+- Flask REST API
+- Supabase integration
+- JWT authentication
+- Complete CRUD operations
+- Self-contained and deployable
 
 ## Project Structure
 
@@ -58,6 +59,7 @@ cp .env.example .env
 ```
 
 Edit `.env`:
+
 ```
 SUPABASE_URL=your-supabase-url
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -66,9 +68,7 @@ FLASK_ENV=development
 PORT=5001
 ```
 
-### 3. Create Supabase Tables
 
-Run the SQL from `../backend/app/community/SUPABASE_SCHEMA.md` in your Supabase SQL Editor.
 
 ### 4. Run the Server
 
@@ -118,6 +118,7 @@ Authorization: Bearer <your-jwt-token>
 ```
 
 Get a token from the main FastAPI backend:
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -173,6 +174,7 @@ python app.py
 ```
 
 This enables:
+
 - Auto-reload on code changes
 - Debug mode
 - Detailed error messages
@@ -207,17 +209,18 @@ gunicorn -w 4 -b 0.0.0.0:5001 app:app
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SUPABASE_URL` | Supabase project URL | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
-| `JWT_SECRET` | Secret for JWT verification | Yes |
-| `FLASK_ENV` | Environment (development/production) | No |
-| `PORT` | Server port | No (default: 5001) |
+| Variable                      | Description                          | Required           |
+| ----------------------------- | ------------------------------------ | ------------------ |
+| `SUPABASE_URL`              | Supabase project URL                 | Yes                |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key            | Yes                |
+| `JWT_SECRET`                | Secret for JWT verification          | Yes                |
+| `FLASK_ENV`                 | Environment (development/production) | No                 |
+| `PORT`                      | Server port                          | No (default: 5001) |
 
 ## CORS
 
 CORS is configured to allow requests from:
+
 - `http://localhost:3000` (Flutter web dev)
 - `http://localhost:8080` (FastAPI backend)
 

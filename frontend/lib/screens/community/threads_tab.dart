@@ -6,7 +6,7 @@ import 'package:syntrak/core/theme.dart';
 import 'package:syntrak/providers/auth_provider.dart';
 import 'package:syntrak/models/post.dart';
 import 'package:syntrak/services/api_service.dart';
-import 'package:syntrak/widgets/message_card.dart';
+import 'package:syntrak/widgets/thread_card.dart';
 
 class ThreadsTab extends StatefulWidget {
   final ValueListenable<int>? refreshTrigger;
@@ -115,6 +115,7 @@ class _ThreadsTabState extends State<ThreadsTab> {
         displayName: displayName,
         username: username,
         avatarUrl: null,
+        isVerified: false, // TODO: Add verified status from backend if available
       ),
       text: text,
       createdAt: createdAt,
@@ -288,10 +289,10 @@ class _ThreadsTabState extends State<ThreadsTab> {
   List<Post> _generateMockPosts() {
     final random = Random();
     final authors = [
-      PostAuthor(id: '1', displayName: 'Alex Johnson', username: 'alexj'),
-      PostAuthor(id: '2', displayName: 'Sarah Chen', username: 'sarahc'),
-      PostAuthor(id: '3', displayName: 'Mike Davis', username: 'miked'),
-      PostAuthor(id: '4', displayName: 'Emma Wilson', username: 'emmaw'),
+      PostAuthor(id: '1', displayName: 'Alex Johnson', username: 'alexj', isVerified: true),
+      PostAuthor(id: '2', displayName: 'Sarah Chen', username: 'sarahc', isVerified: false),
+      PostAuthor(id: '3', displayName: 'Mike Davis', username: 'miked', isVerified: true),
+      PostAuthor(id: '4', displayName: 'Emma Wilson', username: 'emmaw', isVerified: false),
     ];
 
     final messages = [
@@ -309,19 +310,34 @@ class _ThreadsTabState extends State<ThreadsTab> {
       final replies = hasReplies
           ? List.generate(
               random.nextInt(2) + 1,
-              (i) => Post(
-                id: '${index}_reply_$i',
-                author: authors[random.nextInt(authors.length)],
-                text: 'Awesome! Keep shredding! 🤙',
-                createdAt: DateTime.now().subtract(Duration(hours: i)),
-                timestampLabel: '${i + 1}h',
-              ),
+              (i) {
+                final replyAuthor = authors[random.nextInt(authors.length)];
+                return Post(
+                  id: '${index}_reply_$i',
+                  author: PostAuthor(
+                    id: replyAuthor.id,
+                    displayName: replyAuthor.displayName,
+                    username: replyAuthor.username,
+                    avatarUrl: replyAuthor.avatarUrl,
+                    isVerified: replyAuthor.isVerified,
+                  ),
+                  text: 'Awesome! Keep shredding! 🤙',
+                  createdAt: DateTime.now().subtract(Duration(hours: i)),
+                  timestampLabel: '${i + 1}h',
+                );
+              },
             )
           : null;
 
       return Post(
         id: index.toString(),
-        author: author,
+        author: PostAuthor(
+          id: author.id,
+          displayName: author.displayName,
+          username: author.username,
+          avatarUrl: author.avatarUrl,
+          isVerified: random.nextBool(), // Random verified status for mock data
+        ),
         text: messages[index],
         createdAt: DateTime.now().subtract(Duration(hours: index)),
         timestampLabel: index == 0 ? 'now' : '${index}h',
@@ -363,17 +379,13 @@ class _ThreadsTabState extends State<ThreadsTab> {
               itemCount: _filteredPosts.length,
               itemBuilder: (context, index) {
                 final post = _filteredPosts[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: SyntrakSpacing.sm),
-                  child: MessageCard(
-                    post: post,
-                    isExpanded: _expandedPostId == post.id,
-                    onTap: () => _handlePostTap(post),
-                    onLike: _handleLike,
-                    onRepost: _handleRepost,
-                    onReply: _handleReply,
-                    onShare: _handleShare,
-                  ),
+                return ThreadCard(
+                  post: post,
+                  onTap: () => _handlePostTap(post),
+                  onLike: _handleLike,
+                  onRepost: _handleRepost,
+                  onReply: _handleReply,
+                  onShare: _handleShare,
                 );
               },
             ),
