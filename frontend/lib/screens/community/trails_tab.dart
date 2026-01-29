@@ -47,13 +47,11 @@ class _TrailsTabState extends State<TrailsTab> {
       _isLoading = true;
     });
 
-    // TODO: Fetch from backend API
-    await Future.delayed(const Duration(milliseconds: 500));
-
+    // TODO: Fetch from backend API when available
     if (mounted) {
       setState(() {
-        _trails = _generateMockTrails();
-        _filteredTrails = _trails;
+        _trails = [];
+        _filteredTrails = [];
         _isLoading = false;
       });
     }
@@ -83,125 +81,6 @@ class _TrailsTabState extends State<TrailsTab> {
     return _trails.map((t) => t.country).toSet().toList()..sort();
   }
 
-  List<SkiTrail> _generateMockTrails() {
-    return [
-      SkiTrail(
-        id: '1',
-        name: 'Peak to Creek',
-        resort: 'Whistler Blackcomb',
-        country: 'Canada',
-        difficulty: TrailDifficulty.blue,
-        lengthKm: 11.0,
-        elevationDropM: 1609,
-        isGroomed: true,
-        hasSnowmaking: true,
-        description: 'One of the longest runs in North America',
-        rating: 4.8,
-        reviewCount: 1243,
-        features: ['Scenic', 'Long Run', 'Family Friendly'],
-      ),
-      SkiTrail(
-        id: '2',
-        name: 'Corbet\'s Couloir',
-        resort: 'Jackson Hole',
-        country: 'USA',
-        difficulty: TrailDifficulty.doubleBlack,
-        lengthKm: 0.5,
-        elevationDropM: 150,
-        isGroomed: false,
-        description: 'Legendary expert-only chute with a mandatory air entry',
-        rating: 4.9,
-        reviewCount: 892,
-        features: ['Expert Only', 'Cliff Drop', 'Iconic'],
-      ),
-      SkiTrail(
-        id: '3',
-        name: 'La Sarenne',
-        resort: 'Alpe d\'Huez',
-        country: 'France',
-        difficulty: TrailDifficulty.black,
-        lengthKm: 16.0,
-        elevationDropM: 1800,
-        isGroomed: true,
-        description: 'One of the longest black runs in the world',
-        rating: 4.7,
-        reviewCount: 567,
-        features: ['Long Run', 'Alpine Views', 'Challenging'],
-      ),
-      SkiTrail(
-        id: '4',
-        name: 'Harakiri',
-        resort: 'Mayrhofen',
-        country: 'Austria',
-        difficulty: TrailDifficulty.black,
-        lengthKm: 1.5,
-        elevationDropM: 380,
-        isGroomed: true,
-        description: 'Austria\'s steepest groomed slope at 78% gradient',
-        rating: 4.6,
-        reviewCount: 445,
-        features: ['Steep', 'Groomed', 'Challenge'],
-      ),
-      SkiTrail(
-        id: '5',
-        name: 'Big Easy',
-        resort: 'Vail',
-        country: 'USA',
-        difficulty: TrailDifficulty.green,
-        lengthKm: 2.5,
-        elevationDropM: 200,
-        isGroomed: true,
-        hasSnowmaking: true,
-        description: 'Perfect beginner run with gentle slopes',
-        rating: 4.5,
-        reviewCount: 678,
-        features: ['Beginner Friendly', 'Wide', 'Well Groomed'],
-      ),
-      SkiTrail(
-        id: '6',
-        name: 'Vallée Blanche',
-        resort: 'Chamonix',
-        country: 'France',
-        difficulty: TrailDifficulty.red,
-        lengthKm: 20.0,
-        elevationDropM: 2800,
-        isGroomed: false,
-        description: 'Famous off-piste glacier route with stunning views',
-        rating: 4.9,
-        reviewCount: 1567,
-        features: ['Off-Piste', 'Glacier', 'Guide Required', 'Epic Views'],
-      ),
-      SkiTrail(
-        id: '7',
-        name: 'Niseko Super Course',
-        resort: 'Niseko United',
-        country: 'Japan',
-        difficulty: TrailDifficulty.blue,
-        lengthKm: 5.6,
-        elevationDropM: 889,
-        isGroomed: true,
-        description: 'Famous for legendary powder snow',
-        rating: 4.8,
-        reviewCount: 923,
-        features: ['Powder', 'Tree Runs', 'Night Skiing'],
-      ),
-      SkiTrail(
-        id: '8',
-        name: 'Streif',
-        resort: 'Kitzbühel',
-        country: 'Austria',
-        difficulty: TrailDifficulty.doubleBlack,
-        lengthKm: 3.3,
-        elevationDropM: 860,
-        isGroomed: true,
-        description: 'Most dangerous downhill ski race course in the world',
-        rating: 4.7,
-        reviewCount: 334,
-        features: ['World Cup', 'Iconic', 'Expert Only'],
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -219,14 +98,13 @@ class _TrailsTabState extends State<TrailsTab> {
             color: SyntrakColors.primary,
             child: ListView.builder(
               padding: EdgeInsets.zero,
-              // +2 for filter chips and results header
-              itemCount: _filteredTrails.length + 2,
+              itemCount: _filteredTrails.isEmpty
+                  ? 3
+                  : _filteredTrails.length + 2,
               itemBuilder: (context, index) {
-                // First item: filter chips
                 if (index == 0) {
                   return _buildFilterChips();
                 }
-                // Second item: results header
                 if (index == 1) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -234,7 +112,38 @@ class _TrailsTabState extends State<TrailsTab> {
                     child: _buildResultsHeader(),
                   );
                 }
-                // Rest are trail cards
+                if (_filteredTrails.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.terrain,
+                            size: 64,
+                            color: SyntrakColors.textTertiary,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No trails yet',
+                            style: SyntrakTypography.headlineSmall.copyWith(
+                              color: SyntrakColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Trails will appear when the API is connected.',
+                            style: SyntrakTypography.bodyMedium.copyWith(
+                              color: SyntrakColors.textTertiary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
                 return Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: SyntrakSpacing.md),

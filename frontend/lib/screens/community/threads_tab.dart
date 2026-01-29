@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -204,15 +203,17 @@ class _ThreadsTabState extends State<ThreadsTab> {
       if (!mounted) return;
 
       if (subthreadId == null) {
-        print('⚠️ No subthread found, using mock posts');
         if (mounted) {
           setState(() {
             _posts.clear();
-            _posts.addAll(_generateMockPosts());
-            _filteredPosts = List.from(_posts);
+            _filteredPosts = [];
             _isLoading = false;
           });
-          print('✅ Loaded ${_posts.length} mock posts');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No community subthreads available. Pull to refresh.'),
+            ),
+          );
         }
         return;
       }
@@ -545,71 +546,6 @@ class _ThreadsTabState extends State<ThreadsTab> {
         );
       }
     }
-  }
-
-  List<Post> _generateMockPosts() {
-    final random = Random();
-    final authors = [
-      PostAuthor(id: '1', displayName: 'Alex Johnson', username: 'alexj', isVerified: true),
-      PostAuthor(id: '2', displayName: 'Sarah Chen', username: 'sarahc', isVerified: false),
-      PostAuthor(id: '3', displayName: 'Mike Davis', username: 'miked', isVerified: true),
-      PostAuthor(id: '4', displayName: 'Emma Wilson', username: 'emmaw', isVerified: false),
-    ];
-
-    final messages = [
-      'Just hit the slopes at Whistler! Fresh powder day ❄️🎿',
-      'Anyone know if Park City has good snow conditions this week?',
-      'New personal best on the black diamond run! 💪',
-      'Looking for ski buddies in the Tahoe area this weekend.',
-      'The views from the summit were incredible today 🏔️',
-      'Finally landed my first 360! Months of practice paid off 🎉',
-    ];
-
-    return List.generate(6, (index) {
-      final author = authors[random.nextInt(authors.length)];
-      final hasReplies = random.nextBool();
-      final replies = hasReplies
-          ? List.generate(
-              random.nextInt(2) + 1,
-              (i) {
-                final replyAuthor = authors[random.nextInt(authors.length)];
-                return Post(
-                  id: '${index}_reply_$i',
-                  author: PostAuthor(
-                    id: replyAuthor.id,
-                    displayName: replyAuthor.displayName,
-                    username: replyAuthor.username,
-                    avatarUrl: replyAuthor.avatarUrl,
-                    isVerified: replyAuthor.isVerified,
-                  ),
-                  text: 'Awesome! Keep shredding! 🤙',
-                  createdAt: DateTime.now().subtract(Duration(hours: i)),
-                  timestampLabel: '${i + 1}h',
-                );
-              },
-            )
-          : null;
-
-      return Post(
-        id: index.toString(),
-        author: PostAuthor(
-          id: author.id,
-          displayName: author.displayName,
-          username: author.username,
-          avatarUrl: author.avatarUrl,
-          isVerified: random.nextBool(), // Random verified status for mock data
-        ),
-        text: messages[index],
-        createdAt: DateTime.now().subtract(Duration(hours: index)),
-        timestampLabel: index == 0 ? 'now' : '${index}h',
-        likeCount: random.nextInt(50),
-        replyCount: replies?.length ?? 0,
-        repostCount: random.nextInt(20),
-        likedByCurrentUser: random.nextBool(),
-        repostedByCurrentUser: false,
-        replies: replies,
-      );
-    });
   }
 
   @override
