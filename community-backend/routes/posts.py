@@ -6,6 +6,7 @@ import logging
 
 from middleware.auth import get_current_user, get_optional_user
 from services.supabase_client import get_community_client
+from services import cache as cache_svc
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -109,7 +110,7 @@ async def create_post(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create post"
             )
-        
+        cache_svc.invalidate_subthread(data.subthread_id)
         return result
     except HTTPException:
         raise
@@ -227,16 +228,15 @@ async def delete_post(
     """Delete a post and all its comments (authenticated)."""
     try:
         client = get_community_client()
-        
-        # The delete method will verify ownership
-        success = client.delete_post(post_id, user_id)
-        
-        if not success:
+        result = client.delete_post(post_id, user_id)
+        if not result:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Post not found or unauthorized"
             )
-        
+        sid = result.get("subthread_id")
+        if sid:
+            cache_svc.invalidate_subthread(sid)
         return DeleteResponse(
             message="Post and all comments deleted successfully",
             deleted_post_id=post_id
@@ -276,6 +276,9 @@ async def toggle_like(
                 detail="Post not found"
             )
         
+        sid = result.get("subthread_id")
+        if sid:
+            cache_svc.invalidate_subthread(sid)
         return LikeResponse(
             message="Like toggled successfully",
             liked=result["liked"],
@@ -336,7 +339,10 @@ async def create_repost(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create repost"
             )
-        
+        cache_svc.invalidate_subthread(data.subthread_id)
+        orig_sid = original_post.get("subthread_id")
+        if orig_sid and orig_sid != data.subthread_id:
+            cache_svc.invalidate_subthread(orig_sid)
         return result
     except HTTPException:
         raise

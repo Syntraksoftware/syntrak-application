@@ -433,40 +433,28 @@ class CommunitySupabaseClient:
             logger.exception(f"Failed to list posts for user {user_id}: {exc}")
             return []
     
-    def delete_post(self, post_id: str, user_id: str) -> bool:
+    def delete_post(self, post_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         """
         Delete a post and all its comments (via CASCADE).
-        
-        Args:
-            post_id: UUID of the post to delete
-            user_id: UUID of the user attempting deletion (must be post author)
-            
-        Returns:
-            True if deleted successfully, False otherwise
+        Returns dict with ok and subthread_id on success (for cache invalidation), None otherwise.
         """
         try:
-            # Verify the post exists and belongs to the user
             post = self.get_post_by_id(post_id)
             if not post:
                 logger.warning(f"Post {post_id} not found")
-                return False
-            
+                return None
             if post["user_id"] != user_id:
                 logger.warning(f"User {user_id} attempted to delete post {post_id} owned by {post['user_id']}")
-                return False
-            
-            # Delete the post (CASCADE will handle comments)
+                return None
             resp = self._client.table("posts").delete().eq("post_id", post_id).execute()
             data = getattr(resp, "data", None)
-            
             if isinstance(data, list) and data:
                 logger.info(f"Deleted post {post_id} and all comments")
-                return True
-            
-            return False
+                return {"ok": True, "subthread_id": post["subthread_id"]}
+            return None
         except Exception as exc:
             logger.exception(f"Failed to delete post {post_id}: {exc}")
-            return False
+            return None
     
     # ========== Comment Operations ==========
     
@@ -702,6 +690,7 @@ class CommunitySupabaseClient:
                 return {
                     "liked": False,
                     "like_count": new_count,
+                    "subthread_id": post_data[0].get("subthread_id"),
                 }
             else:
                 # Like: create the like and increment count
@@ -718,6 +707,7 @@ class CommunitySupabaseClient:
                     return {
                         "liked": True,
                         "like_count": current_like_count,
+                        "subthread_id": post_data[0].get("subthread_id"),
                     }
                 
                 # Insert the like
@@ -740,6 +730,7 @@ class CommunitySupabaseClient:
                             return {
                                 "liked": True,
                                 "like_count": current_like_count,
+                                "subthread_id": post_data[0].get("subthread_id"),
                             }
                         logger.warning(f"Failed to insert like for post {post_id} by user {user_id}")
                         return None
@@ -758,6 +749,7 @@ class CommunitySupabaseClient:
                             return {
                                 "liked": True,
                                 "like_count": current_like_count,
+                                "subthread_id": post_data[0].get("subthread_id"),
                             }
                     # Re-raise if it's not a unique constraint error
                     logger.exception(f"Unexpected error inserting like: {insert_exc}")
@@ -785,6 +777,7 @@ class CommunitySupabaseClient:
                 return {
                     "liked": True,
                     "like_count": new_count,
+                    "subthread_id": post_data[0].get("subthread_id"),
                 }
         except Exception as exc:
             logger.exception(f"Failed to toggle like for post {post_id}: {exc}")
