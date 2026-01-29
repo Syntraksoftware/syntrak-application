@@ -11,6 +11,7 @@ import logging
 
 from config import get_config
 from services.supabase_client import initialize_community_client
+from services.cache import init_cache
 
 # Configure logging
 logging.basicConfig(
@@ -30,14 +31,16 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {config.FASTAPI_ENV}")
     logger.info(f"Debug mode: {config.DEBUG}")
     
-    # Initialize Supabase client at startup (thread-safe, single instance)
     try:
         initialize_community_client()
         logger.info("✅ Supabase Global Client Instance initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize services: {e}")
         raise
-    
+    try:
+        init_cache(config.REDIS_URL, config.CACHE_TTL_SECONDS)
+    except Exception as e:
+        logger.warning("Redis cache disabled: %s", e)
     yield
     
     # Shutdown

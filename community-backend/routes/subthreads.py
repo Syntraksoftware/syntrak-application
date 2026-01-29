@@ -1,11 +1,13 @@
 """Subthread routes."""
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import Optional, List
-from pydantic import BaseModel
+import asyncio
 import logging
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 
 from middleware.auth import get_current_user, get_optional_user
 from services.supabase_client import get_community_client
+from services import cache as cache_svc
 from routes.posts import PostResponse as PostsPostResponse
 
 logger = logging.getLogger(__name__)
@@ -117,6 +119,25 @@ class PostsListResponse(BaseModel):
     page_size: int
 
 
+def _posts_to_models(posts: list) -> list:
+    """Convert post dicts to PostResponse models."""
+    post_models = []
+    for post in posts:
+        try:
+            if "reposted_post" in post and post["reposted_post"]:
+                r = post["reposted_post"]
+                if isinstance(r, dict):
+                    post["reposted_post"] = PostsPostResponse(**{k: v for k, v in r.items() if k != "reposted_post"})
+            post_models.append(PostsPostResponse(**post))
+        except Exception as e:
+            logger.debug("Post conversion: %s", e)
+            try:
+                post_models.append(PostsPostResponse(**{k: v for k, v in post.items() if k != "reposted_post"}))
+            except Exception:
+                continue
+    return post_models
+
+
 @router.get("/{subthread_id}/posts", response_model=PostsListResponse)
 async def list_subthread_posts(
     subthread_id: str,
@@ -124,65 +145,44 @@ async def list_subthread_posts(
     offset: int = Query(0, ge=0),
     current_user: Optional[str] = Depends(get_optional_user),
 ):
-    """List posts in a subthread (includes reposted_post for reposts)."""
+    """List posts in a subthread (cached for faster reloads)."""
     try:
         client = get_community_client()
-        
-        # Verify subthread exists
         subthread = client.get_subthread_by_id(subthread_id)
         if not subthread:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Subthread not found"
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subthread not found")
+        cached = await asyncio.to_thread(
+            cache_svc.get_posts, subthread_id, limit, offset, current_user
+        )
+        if cached:
+            post_models = _posts_to_models(cached["posts"])
+            return PostsListResponse(
+                posts=post_models,
+                total=cached["total"],
+                page=offset // limit + 1,
+                page_size=limit,
             )
-        
         posts = client.list_posts_by_subthread(
-            subthread_id=subthread_id,
-            limit=limit,
-            offset=offset,
-            current_user_id=current_user,
+            subthread_id=subthread_id, limit=limit, offset=offset, current_user_id=current_user,
         )
         total = client.count_posts_by_subthread(subthread_id)
-        
-        # Convert dicts to Pydantic models (includes reposted_post, like_count, reply_count, etc.)
-        post_models = []
-        for post in posts:
-            try:
-                # Ensure nested reposted_post is a PostResponse so it serializes in the JSON response
-                if "reposted_post" in post and post["reposted_post"]:
-                    reposted_post_dict = post["reposted_post"]
-                    if isinstance(reposted_post_dict, dict):
-                        # Build nested model without reposted_post to avoid recursion
-                        nested = {k: v for k, v in reposted_post_dict.items() if k != "reposted_post"}
-                        post["reposted_post"] = PostsPostResponse(**nested)
-                post_model = PostsPostResponse(**post)
-                post_models.append(post_model)
-            except Exception as e:
-                logger.error(f"Error converting post to PostResponse: {str(e)}, post_id: {post.get('post_id')}")
-                logger.exception(e)
-                # Try without reposted_post if it fails
-                try:
-                    post_without_repost = {k: v for k, v in post.items() if k != "reposted_post"}
-                    post_model = PostsPostResponse(**post_without_repost)
-                    post_models.append(post_model)
-                except:
-                    logger.error(f"Failed to convert post even without reposted_post: {post.get('post_id')}")
-                    # Skip this post
-                    continue
-        
+        await asyncio.to_thread(
+            cache_svc.set_posts, subthread_id, limit, offset, current_user, posts, total
+        )
+        post_models = _posts_to_models(posts)
         return PostsListResponse(
             posts=post_models,
             total=total,
             page=offset // limit + 1,
-            page_size=limit
+            page_size=limit,
         )
     except HTTPException:
         raise
-    except Exception:
-        logger.error(f"Error listing subthread posts")
+    except Exception as e:
+        logger.error("Error listing subthread posts: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
+            detail="Internal Server Error",
         )
 
 

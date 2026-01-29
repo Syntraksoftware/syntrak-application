@@ -29,6 +29,10 @@ class Config:
     PORT = int(os.getenv("PORT", 5001))
     HOST = os.getenv("HOST", "127.0.0.1")
 
+    # Redis (optional; cache disabled if not set)
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "300"))  # 5 minutes
+
     # CORS
     CORS_ORIGINS = [
         "http://localhost:3000",  # Flutter web dev
