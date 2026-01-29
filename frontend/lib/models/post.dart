@@ -11,6 +11,7 @@ class Post {
   final bool likedByCurrentUser;
   final bool repostedByCurrentUser;
   final List<Post>? replies;
+  final Post? repostedPost; // Embedded reposted post
 
   Post({
     required this.id,
@@ -25,6 +26,7 @@ class Post {
     this.likedByCurrentUser = false,
     this.repostedByCurrentUser = false,
     this.replies,
+    this.repostedPost,
   });
 
   Post copyWith({
@@ -40,6 +42,7 @@ class Post {
     bool? likedByCurrentUser,
     bool? repostedByCurrentUser,
     List<Post>? replies,
+    Post? repostedPost,
   }) {
     return Post(
       id: id ?? this.id,
@@ -55,6 +58,7 @@ class Post {
       repostedByCurrentUser:
           repostedByCurrentUser ?? this.repostedByCurrentUser,
       replies: replies ?? this.replies,
+      repostedPost: repostedPost ?? this.repostedPost,
     );
   }
 }

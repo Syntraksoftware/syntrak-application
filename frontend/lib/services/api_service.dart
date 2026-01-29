@@ -134,4 +134,20 @@ class ApiService {
     int offset = 0,
   }) =>
       _communityApi.getPostsByUserId(userId, limit: limit, offset: offset);
+
+  Future<Map<String, dynamic>> toggleLike(String postId) =>
+      _communityApi.toggleLike(postId);
+
+  Future<Map<String, dynamic>> createRepost({
+    required String postId,
+    required String subthreadId,
+    String? content,
+  }) =>
+      _communityApi.createRepost(
+        postId: postId,
+        subthreadId: subthreadId,
+        content: content,
+      );
+
+  Future<void> deletePost(String postId) => _communityApi.deletePost(postId);
 }

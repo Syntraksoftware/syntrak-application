@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   main-backend:
     build:
@@ -8,8 +6,7 @@ services:
     container_name: syntrak-main-backend
     ports:
       - "8080:8080"
-    volumes:
-      - ./main-backend:/app
+    # Bind mount disabled: add back "volumes: - ./main-backend:/app" after sharing this path in Docker Desktop -> Preferences -> Resources -> File Sharing
     env_file:
       - ./main-backend/.env
     environment:
@@ -33,8 +30,7 @@ services:
     container_name: syntrak-community-backend
     ports:
       - "5001:5001"
-    volumes:
-      - ./community-backend:/app
+    # Bind mount disabled for same reason as main-backend
     env_file:
       - ./community-backend/.env
     environment:
@@ -58,8 +54,7 @@ services:
     container_name: syntrak-activity-backend
     ports:
       - "5100:5100"
-    volumes:
-      - ./activity-backend:/app
+    # Bind mount disabled for same reason as main-backend
     env_file:
       - ./activity-backend/.env
     environment:

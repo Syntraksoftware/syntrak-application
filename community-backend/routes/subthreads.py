@@ -6,6 +6,7 @@ import logging
 
 from middleware.auth import get_current_user, get_optional_user
 from services.supabase_client import get_community_client
+from routes.posts import PostResponse as PostsPostResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -108,22 +109,9 @@ async def get_subthread(subthread_id: str):
         )
 
 
-class PostResponse(BaseModel):
-    """Schema for post in subthread list."""
-    post_id: str
-    user_id: str
-    subthread_id: str
-    title: str
-    content: str
-    created_at: str
-    author_email: Optional[str] = None
-    author_first_name: Optional[str] = None
-    author_last_name: Optional[str] = None
-
-
 class PostsListResponse(BaseModel):
     """Schema for posts list response."""
-    posts: List[PostResponse]
+    posts: List[PostsPostResponse]
     total: int
     page: int
     page_size: int
@@ -133,9 +121,10 @@ class PostsListResponse(BaseModel):
 async def list_subthread_posts(
     subthread_id: str,
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    current_user: Optional[str] = Depends(get_optional_user),
 ):
-    """List posts in a subthread."""
+    """List posts in a subthread (includes reposted_post for reposts)."""
     try:
         client = get_community_client()
         
@@ -150,12 +139,36 @@ async def list_subthread_posts(
         posts = client.list_posts_by_subthread(
             subthread_id=subthread_id,
             limit=limit,
-            offset=offset
+            offset=offset,
+            current_user_id=current_user,
         )
         total = client.count_posts_by_subthread(subthread_id)
         
-        # Convert dicts to Pydantic models
-        post_models = [PostResponse(**post) for post in posts]
+        # Convert dicts to Pydantic models (includes reposted_post, like_count, reply_count, etc.)
+        post_models = []
+        for post in posts:
+            try:
+                # Ensure nested reposted_post is a PostResponse so it serializes in the JSON response
+                if "reposted_post" in post and post["reposted_post"]:
+                    reposted_post_dict = post["reposted_post"]
+                    if isinstance(reposted_post_dict, dict):
+                        # Build nested model without reposted_post to avoid recursion
+                        nested = {k: v for k, v in reposted_post_dict.items() if k != "reposted_post"}
+                        post["reposted_post"] = PostsPostResponse(**nested)
+                post_model = PostsPostResponse(**post)
+                post_models.append(post_model)
+            except Exception as e:
+                logger.error(f"Error converting post to PostResponse: {str(e)}, post_id: {post.get('post_id')}")
+                logger.exception(e)
+                # Try without reposted_post if it fails
+                try:
+                    post_without_repost = {k: v for k, v in post.items() if k != "reposted_post"}
+                    post_model = PostsPostResponse(**post_without_repost)
+                    post_models.append(post_model)
+                except:
+                    logger.error(f"Failed to convert post even without reposted_post: {post.get('post_id')}")
+                    # Skip this post
+                    continue
         
         return PostsListResponse(
             posts=post_models,

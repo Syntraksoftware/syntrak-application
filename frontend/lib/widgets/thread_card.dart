@@ -4,7 +4,7 @@ import 'package:syntrak/models/post.dart';
 
 /// Reusable thread card component matching social media feed design
 /// All elements are left-aligned as per design requirements
-class ThreadCard extends StatefulWidget {
+class ThreadCard extends StatelessWidget {
   final Post post;
   final VoidCallback? onTap;
   final VoidCallback? onAvatarTap;
@@ -27,14 +27,9 @@ class ThreadCard extends StatefulWidget {
   });
 
   @override
-  State<ThreadCard> createState() => _ThreadCardState();
-}
-
-class _ThreadCardState extends State<ThreadCard> {
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -75,17 +70,17 @@ class _ThreadCardState extends State<ThreadCard> {
       children: [
         // Profile picture
         GestureDetector(
-          onTap: widget.onAvatarTap,
+          onTap: onAvatarTap,
           child: CircleAvatar(
             radius: 20,
             backgroundColor: SyntrakColors.surfaceVariant,
-            backgroundImage: widget.post.author.avatarUrl != null
-                ? NetworkImage(widget.post.author.avatarUrl!)
+            backgroundImage: post.author.avatarUrl != null
+                ? NetworkImage(post.author.avatarUrl!)
                 : null,
-            child: widget.post.author.avatarUrl == null
+            child: post.author.avatarUrl == null
                 ? Text(
-                    widget.post.author.displayName.isNotEmpty
-                        ? widget.post.author.displayName[0].toUpperCase()
+                    post.author.displayName.isNotEmpty
+                        ? post.author.displayName[0].toUpperCase()
                         : '?',
                     style: SyntrakTypography.bodyMedium.copyWith(
                       color: SyntrakColors.textPrimary,
@@ -101,13 +96,13 @@ class _ThreadCardState extends State<ThreadCard> {
           child: Row(
             children: [
               Text(
-                widget.post.author.username,
+                post.author.username,
                 style: SyntrakTypography.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
                   color: SyntrakColors.textPrimary,
                 ),
               ),
-              if (widget.post.author.isVerified) ...[
+              if (post.author.isVerified) ...[
                 const SizedBox(width: 4),
                 Icon(
                   Icons.verified,
@@ -120,7 +115,7 @@ class _ThreadCardState extends State<ThreadCard> {
         ),
         // Timestamp
         Text(
-          widget.post.timestampLabel,
+          post.timestampLabel,
           style: SyntrakTypography.bodySmall.copyWith(
             color: SyntrakColors.textTertiary,
           ),
@@ -128,7 +123,7 @@ class _ThreadCardState extends State<ThreadCard> {
         const SizedBox(width: 8),
         // More options icon
         GestureDetector(
-          onTap: () => widget.onMoreOptions?.call(widget.post),
+          onTap: () => onMoreOptions?.call(post),
           child: Icon(
             Icons.more_horiz,
             size: 20,
@@ -142,12 +137,100 @@ class _ThreadCardState extends State<ThreadCard> {
   Widget _buildContent() {
     return Padding(
       padding: const EdgeInsets.only(left: 52), // Align with username (avatar 40px + spacing 12px)
-      child: Text(
-        widget.post.text,
-        style: SyntrakTypography.bodyLarge.copyWith(
-          color: SyntrakColors.textPrimary,
-          height: 1.4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main post content
+          if (post.text.isNotEmpty)
+            Text(
+              post.text,
+              style: SyntrakTypography.bodyLarge.copyWith(
+                color: SyntrakColors.textPrimary,
+                height: 1.4,
+              ),
+            ),
+          // Embedded reposted post
+          if (post.repostedPost != null) ...[
+            if (post.text.isNotEmpty) const SizedBox(height: 12),
+            _buildRepostedPost(post.repostedPost!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRepostedPost(Post repostedPost) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: SyntrakColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: SyntrakColors.divider,
+          width: 1,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Reposted post header
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 12,
+                backgroundColor: SyntrakColors.surface,
+                backgroundImage: repostedPost.author.avatarUrl != null
+                    ? NetworkImage(repostedPost.author.avatarUrl!)
+                    : null,
+                child: repostedPost.author.avatarUrl == null
+                    ? Text(
+                        repostedPost.author.displayName.isNotEmpty
+                            ? repostedPost.author.displayName[0].toUpperCase()
+                            : '?',
+                        style: SyntrakTypography.bodySmall.copyWith(
+                          color: SyntrakColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                repostedPost.author.username,
+                style: SyntrakTypography.bodySmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: SyntrakColors.textPrimary,
+                ),
+              ),
+              if (repostedPost.author.isVerified) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.verified,
+                  size: 12,
+                  color: SyntrakColors.primary,
+                ),
+              ],
+              const Spacer(),
+              Text(
+                repostedPost.timestampLabel,
+                style: SyntrakTypography.bodySmall.copyWith(
+                  color: SyntrakColors.textTertiary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Reposted post content
+          Text(
+            repostedPost.text,
+            style: SyntrakTypography.bodyMedium.copyWith(
+              color: SyntrakColors.textPrimary,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -159,30 +242,30 @@ class _ThreadCardState extends State<ThreadCard> {
         children: [
           // Heart icon
           _buildActionIcon(
-            icon: widget.post.likedByCurrentUser
+            icon: post.likedByCurrentUser
                 ? Icons.favorite
                 : Icons.favorite_border,
-            isActive: widget.post.likedByCurrentUser,
-            onTap: () => widget.onLike?.call(widget.post),
+            isActive: post.likedByCurrentUser,
+            onTap: () => onLike?.call(post),
           ),
           const SizedBox(width: 24),
           // Comment icon
           _buildActionIcon(
             icon: Icons.chat_bubble_outline,
-            onTap: () => widget.onReply?.call(widget.post),
+            onTap: () => onReply?.call(post),
           ),
           const SizedBox(width: 24),
           // Repost icon
           _buildActionIcon(
             icon: Icons.repeat,
-            isActive: widget.post.repostedByCurrentUser,
-            onTap: () => widget.onRepost?.call(widget.post),
+            isActive: post.repostedByCurrentUser,
+            onTap: () => onRepost?.call(post),
           ),
           const SizedBox(width: 24),
           // Bookmark icon
           _buildActionIcon(
             icon: Icons.bookmark_border,
-            onTap: () => widget.onShare?.call(widget.post),
+            onTap: () => onShare?.call(post),
           ),
         ],
       ),
@@ -210,8 +293,8 @@ class _ThreadCardState extends State<ThreadCard> {
   }
 
   Widget _buildInteractionSummary() {
-    // Only show if there are replies or likes
-    if (widget.post.replyCount == 0 && widget.post.likeCount == 0) {
+    // Always show when any count is not zero (persists after reload from backend)
+    if (post.replyCount == 0 && post.likeCount == 0 && post.repostCount == 0) {
       return const SizedBox.shrink();
     }
 
@@ -239,13 +322,18 @@ class _ThreadCardState extends State<ThreadCard> {
     final avatars = <Widget>[];
     
     // Add avatar for likes if there are any
-    if (widget.post.likeCount > 0) {
+    if (post.likeCount > 0) {
       avatars.add(_buildSmallAvatar(Icons.favorite, Colors.red));
     }
     
     // Add avatar for replies if there are any
-    if (widget.post.replyCount > 0) {
+    if (post.replyCount > 0) {
       avatars.add(_buildSmallAvatar(Icons.chat_bubble_outline, SyntrakColors.primary));
+    }
+    
+    // Add avatar for reposts if there are any
+    if (post.repostCount > 0) {
+      avatars.add(_buildSmallAvatar(Icons.repeat, SyntrakColors.primary));
     }
 
     if (avatars.isEmpty) {
@@ -253,12 +341,13 @@ class _ThreadCardState extends State<ThreadCard> {
     }
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: avatars.asMap().entries.map((entry) {
         final index = entry.key;
         final avatar = entry.value;
         return Container(
           margin: EdgeInsets.only(
-            right: index < avatars.length - 1 ? -8 : 0,
+            right: index < avatars.length - 1 ? 4 : 0,
           ),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -287,11 +376,14 @@ class _ThreadCardState extends State<ThreadCard> {
 
   String _buildInteractionText() {
     final parts = <String>[];
-    if (widget.post.replyCount > 0) {
-      parts.add('${widget.post.replyCount} ${widget.post.replyCount == 1 ? 'reply' : 'replies'}');
+    if (post.replyCount > 0) {
+      parts.add('${post.replyCount} ${post.replyCount == 1 ? 'reply' : 'replies'}');
     }
-    if (widget.post.likeCount > 0) {
-      parts.add('${widget.post.likeCount} ${widget.post.likeCount == 1 ? 'like' : 'likes'}');
+    if (post.likeCount > 0) {
+      parts.add('${post.likeCount} ${post.likeCount == 1 ? 'like' : 'likes'}');
+    }
+    if (post.repostCount > 0) {
+      parts.add('${post.repostCount} ${post.repostCount == 1 ? 'repost' : 'reposts'}');
     }
     return parts.join(' · ');
   }

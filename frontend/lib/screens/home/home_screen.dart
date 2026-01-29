@@ -18,10 +18,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 2; // Start on Home (Activities Feed)
+  static const int _homeTabIndex = 2; // Home (Activities Feed)
+  int _currentIndex = _homeTabIndex;
   final LocationService _locationService = LocationService();
   bool _hasCheckedPermission = false;
-  final PageController _pageController = PageController(initialPage: 2);
+  late final PageController _pageController = PageController(initialPage: _homeTabIndex);
 
   // Restructured navigation order: Map, Community, Home, Groups/Activities, You
   final List<Widget> _screens = [
@@ -35,10 +36,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Ensure currentIndex is within bounds on initialization
-    _currentIndex = _currentIndex.clamp(0, _screens.length - 1);
-    // Check and ask for location permission after a short delay
+    // Ensure we always start on Home tab (Activities Feed), not Community
+    _currentIndex = _homeTabIndex.clamp(0, _screens.length - 1);
+    // Force PageView to show Home tab after first frame (avoids Community showing first)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _pageController.jumpToPage(_homeTabIndex);
+        setState(() => _currentIndex = _homeTabIndex);
+      }
       _checkLocationPermission();
     });
   }

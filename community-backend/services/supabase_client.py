@@ -179,6 +179,7 @@ class CommunitySupabaseClient:
         subthread_id: str,
         title: str,
         content: str,
+        reposted_post_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Create a new post.
@@ -188,6 +189,7 @@ class CommunitySupabaseClient:
             subthread_id: UUID of the subthread
             title: Post title
             content: Post content
+            reposted_post_id: Optional UUID of the original post (for reposts)
             
         Returns:
             Created post data or None on failure
@@ -199,6 +201,9 @@ class CommunitySupabaseClient:
                 "title": title,
                 "content": content,
             }
+            if reposted_post_id:
+                payload["reposted_post_id"] = reposted_post_id
+            
             resp = self._client.table("posts").insert(payload).execute()
             data = getattr(resp, "data", None)
             if isinstance(data, list) and data:
@@ -209,8 +214,20 @@ class CommunitySupabaseClient:
             logger.exception(f"Failed to create post: {exc}")
             return None
     
-    def get_post_by_id(self, post_id: str) -> Optional[Dict[str, Any]]:
-        """Get post by ID with author information."""
+    def get_post_by_id(
+        self, 
+        post_id: str, 
+        current_user_id: Optional[str] = None,
+        include_reposted_post: bool = True
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get post by ID with author information, like counts, and reposted post.
+        
+        Args:
+            post_id: UUID of the post
+            current_user_id: Optional UUID of current user for like/repost status
+            include_reposted_post: If True, recursively fetch reposted_post (one level only)
+        """
         try:
             resp = self._client.table("posts").select(
                 "*, user_info!posts_user_id_fkey(email, first_name, last_name)"
@@ -224,34 +241,125 @@ class CommunitySupabaseClient:
                     post["author_email"] = author.get("email")
                     post["author_first_name"] = author.get("first_name")
                     post["author_last_name"] = author.get("last_name")
+                
+                # Get like_count, repost_count, reply_count
+                post["like_count"] = post.get("like_count", 0) or 0
+                post["repost_count"] = post.get("repost_count", 0) or 0
+                post["reply_count"] = self.count_comments_by_post(post_id)
+                
+                # Check if user liked/reposted this post
+                if current_user_id:
+                    post["liked_by_current_user"] = self.is_post_liked_by_user(
+                        post_id, current_user_id
+                    )
+                    post["reposted_by_current_user"] = self.is_post_reposted_by_user(
+                        post_id, current_user_id
+                    )
+                else:
+                    post["liked_by_current_user"] = False
+                    post["reposted_by_current_user"] = False
+                
+                # If this is a repost, get the original post (without its reposted_post to avoid infinite recursion)
+                if include_reposted_post:
+                    reposted_post_id = post.get("reposted_post_id")
+                    if reposted_post_id:
+                        original_post = self.get_post_by_id(
+                            reposted_post_id, current_user_id, include_reposted_post=False
+                        )
+                        if original_post:
+                            post["reposted_post"] = original_post
+                
                 return post
             return None
         except Exception as exc:
             logger.exception(f"Failed to get post {post_id}: {exc}")
             return None
-    
+
+    def get_posts_by_ids(
+        self,
+        post_ids: List[str],
+        current_user_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch multiple posts by ID with author info and counts (one query + batch lookups)."""
+        if not post_ids:
+            return []
+        try:
+            resp = self._client.table("posts").select(
+                "*, user_info!posts_user_id_fkey(email, first_name, last_name)"
+            ).in_("post_id", post_ids).execute()
+            data = getattr(resp, "data", None)
+            if not isinstance(data, list):
+                return []
+            reply_counts = self.get_comment_counts_for_posts(post_ids)
+            liked_set = self.get_liked_post_ids_for_user(current_user_id, post_ids) if current_user_id else set()
+            reposted_set = self.get_reposted_post_ids_for_user(current_user_id, post_ids) if current_user_id else set()
+            enriched = []
+            for post in data:
+                if "user_info" in post and post["user_info"]:
+                    author = post.pop("user_info")
+                    post["author_email"] = author.get("email")
+                    post["author_first_name"] = author.get("first_name")
+                    post["author_last_name"] = author.get("last_name")
+                pid = post.get("post_id")
+                if pid:
+                    post["like_count"] = post.get("like_count", 0) or 0
+                    post["repost_count"] = post.get("repost_count", 0) or 0
+                    post["reply_count"] = reply_counts.get(pid, 0)
+                    post["liked_by_current_user"] = pid in liked_set if current_user_id else False
+                    post["reposted_by_current_user"] = pid in reposted_set if current_user_id else False
+                enriched.append(post)
+            return enriched
+        except Exception as exc:
+            logger.exception(f"Failed to get posts by ids: {exc}")
+            return []
+
     def list_posts_by_subthread(
         self,
         subthread_id: str,
         limit: int = 20,
         offset: int = 0,
+        current_user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """List posts in a subthread with author information."""
+        """List posts in a subthread with author info, counts, and reposted posts (batched to avoid timeout)."""
         try:
             resp = self._client.table("posts").select(
                 "*, user_info!posts_user_id_fkey(email, first_name, last_name)"
             ).eq("subthread_id", subthread_id).order("created_at", desc=True).range(offset, offset + limit - 1).execute()
             data = getattr(resp, "data", None)
-            if isinstance(data, list):
-                # Flatten author info for each post
-                for post in data:
-                    if "user_info" in post and post["user_info"]:
-                        author = post.pop("user_info")
-                        post["author_email"] = author.get("email")
-                        post["author_first_name"] = author.get("first_name")
-                        post["author_last_name"] = author.get("last_name")
-                return data
-            return []
+            if not isinstance(data, list):
+                return []
+            post_ids = [p["post_id"] for p in data if p.get("post_id")]
+            if not post_ids:
+                return []
+            # One batch for comment counts, liked, reposted
+            reply_counts = self.get_comment_counts_for_posts(post_ids)
+            liked_set = self.get_liked_post_ids_for_user(current_user_id, post_ids) if current_user_id else set()
+            reposted_set = self.get_reposted_post_ids_for_user(current_user_id, post_ids) if current_user_id else set()
+            # One batch for all reposted originals
+            reposted_ids = list({p["reposted_post_id"] for p in data if p.get("reposted_post_id")})
+            originals_map = {}
+            if reposted_ids:
+                originals_list = self.get_posts_by_ids(reposted_ids, current_user_id)
+                originals_map = {p["post_id"]: p for p in originals_list}
+            enriched_posts = []
+            for post in data:
+                if "user_info" in post and post["user_info"]:
+                    author = post.pop("user_info")
+                    post["author_email"] = author.get("email")
+                    post["author_first_name"] = author.get("first_name")
+                    post["author_last_name"] = author.get("last_name")
+                post_id = post.get("post_id")
+                if post_id:
+                    post["like_count"] = post.get("like_count", 0) or 0
+                    post["repost_count"] = post.get("repost_count", 0) or 0
+                    post["reply_count"] = reply_counts.get(post_id, 0)
+                    post["liked_by_current_user"] = post_id in liked_set if current_user_id else False
+                    post["reposted_by_current_user"] = post_id in reposted_set if current_user_id else False
+                    rid = post.get("reposted_post_id")
+                    if rid and rid in originals_map:
+                        post["reposted_post"] = originals_map[rid]
+                enriched_posts.append(post)
+            return enriched_posts
         except Exception as exc:
             logger.exception(f"Failed to list posts for subthread {subthread_id}: {exc}")
             return []
@@ -271,22 +379,55 @@ class CommunitySupabaseClient:
         user_id: str,
         limit: int = 20,
         offset: int = 0,
+        current_user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """List posts by user ID with author information."""
+        """List posts by user ID with author information, like counts, and reposted posts."""
         try:
             resp = self._client.table("posts").select(
                 "*, user_info!posts_user_id_fkey(email, first_name, last_name)"
             ).eq("user_id", user_id).order("created_at", desc=True).range(offset, offset + limit - 1).execute()
             data = getattr(resp, "data", None)
             if isinstance(data, list):
-                # Flatten author info for each post
+                # Enrich each post with author info, likes, and reposts
+                enriched_posts = []
                 for post in data:
+                    # Flatten author info
                     if "user_info" in post and post["user_info"]:
                         author = post.pop("user_info")
                         post["author_email"] = author.get("email")
                         post["author_first_name"] = author.get("first_name")
                         post["author_last_name"] = author.get("last_name")
-                return data
+                    
+                    post_id = post.get("post_id")
+                    if post_id:
+                        # Get like_count, repost_count, reply_count
+                        post["like_count"] = post.get("like_count", 0) or 0
+                        post["repost_count"] = post.get("repost_count", 0) or 0
+                        post["reply_count"] = self.count_comments_by_post(post_id)
+                        
+                        # Add user's like/repost status
+                        if current_user_id:
+                            post["liked_by_current_user"] = self.is_post_liked_by_user(
+                                post_id, current_user_id
+                            )
+                            post["reposted_by_current_user"] = self.is_post_reposted_by_user(
+                                post_id, current_user_id
+                            )
+                        else:
+                            post["liked_by_current_user"] = False
+                            post["reposted_by_current_user"] = False
+                        
+                        # If this is a repost, get the original post (without its reposted_post to avoid infinite recursion)
+                        reposted_post_id = post.get("reposted_post_id")
+                        if reposted_post_id:
+                            original_post = self.get_post_by_id(
+                                reposted_post_id, current_user_id, include_reposted_post=False
+                            )
+                            if original_post:
+                                post["reposted_post"] = original_post
+                    
+                    enriched_posts.append(post)
+                return enriched_posts
             return []
         except Exception as exc:
             logger.exception(f"Failed to list posts for user {user_id}: {exc}")
@@ -417,7 +558,48 @@ class CommunitySupabaseClient:
         except Exception as exc:
             logger.exception(f"Failed to count comments: {exc}")
             return 0
-    
+
+    def get_comment_counts_for_posts(self, post_ids: List[str]) -> Dict[str, int]:
+        """Return comment count per post_id (one query for all)."""
+        if not post_ids:
+            return {}
+        try:
+            resp = self._client.table("comments").select("post_id").in_("post_id", post_ids).execute()
+            data = getattr(resp, "data", None) or []
+            counts: Dict[str, int] = {pid: 0 for pid in post_ids}
+            for row in data:
+                pid = row.get("post_id")
+                if pid:
+                    counts[pid] = counts.get(pid, 0) + 1
+            return counts
+        except Exception as exc:
+            logger.exception(f"Failed to get comment counts: {exc}")
+            return {pid: 0 for pid in post_ids}
+
+    def get_liked_post_ids_for_user(self, user_id: str, post_ids: List[str]) -> set:
+        """Return set of post_ids liked by user (one query)."""
+        if not post_ids or not user_id:
+            return set()
+        try:
+            resp = self._client.table("post_likes").select("post_id").eq("user_id", user_id).in_("post_id", post_ids).execute()
+            data = getattr(resp, "data", None) or []
+            return {row["post_id"] for row in data if row.get("post_id")}
+        except Exception as exc:
+            logger.exception(f"Failed to get liked post ids: {exc}")
+            return set()
+
+    def get_reposted_post_ids_for_user(self, user_id: str, original_post_ids: List[str]) -> set:
+        """Return set of original post_ids that the user has reposted (one query)."""
+        if not original_post_ids or not user_id:
+            return set()
+        try:
+            resp = self._client.table("posts").select("reposted_post_id").eq("user_id", user_id).in_("reposted_post_id", original_post_ids).execute()
+            data = getattr(resp, "data", None) or []
+            return {row["reposted_post_id"] for row in data if row.get("reposted_post_id")}
+        except Exception as exc:
+            logger.exception(f"Failed to get reposted post ids: {exc}")
+            return set()
+
     def delete_comment(self, comment_id: str, user_id: str) -> bool:
         """
         Delete a comment (and all nested child comments via CASCADE).
@@ -452,3 +634,297 @@ class CommunitySupabaseClient:
         except Exception as exc:
             logger.exception(f"Failed to delete comment {comment_id}: {exc}")
             return False
+    
+    # ========== Like Operations ==========
+    
+    def toggle_post_like(self, post_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Toggle like on a post (like if not liked, unlike if liked).
+        Updates the like_count in the posts table directly.
+        Enforces one like per user (can only like or unlike, not multiple likes).
+        
+        Args:
+            post_id: UUID of the post
+            user_id: UUID of the user
+            
+        Returns:
+            Dict with 'liked' (bool) and 'like_count' (int) or None on failure
+        """
+        try:
+            # First verify the post exists and get current like_count
+            # Use * to get all columns in case post_id column name is different
+            post_resp = self._client.table("posts").select("*").eq(
+                "post_id", post_id
+            ).limit(1).execute()
+            
+            post_data = getattr(post_resp, "data", None)
+            if not isinstance(post_data, list) or len(post_data) == 0:
+                logger.error(f"Post {post_id} not found in database")
+                return None
+            
+            # Log for debugging
+            logger.debug(f"Found post {post_id}, current like_count: {post_data[0].get('like_count', 0)}")
+            
+            current_like_count = post_data[0].get("like_count", 0) or 0
+            
+            # Check if like already exists (using the unique constraint)
+            existing_like_resp = self._client.table("post_likes").select("id").eq(
+                "post_id", post_id
+            ).eq("user_id", user_id).limit(1).execute()
+            
+            like_data = getattr(existing_like_resp, "data", None)
+            is_liked = isinstance(like_data, list) and len(like_data) > 0
+            
+            if is_liked:
+                # Unlike: delete the like and decrement count
+                delete_resp = self._client.table("post_likes").delete().eq(
+                    "post_id", post_id
+                ).eq("user_id", user_id).execute()
+                
+                # Verify deletion succeeded
+                deleted_data = getattr(delete_resp, "data", None)
+                if not isinstance(deleted_data, list) or len(deleted_data) == 0:
+                    logger.warning(f"Failed to delete like for post {post_id} by user {user_id}")
+                    return None
+                
+                # Decrement like_count in posts table
+                new_count = max(0, current_like_count - 1)
+                update_resp = self._client.table("posts").update({
+                    "like_count": new_count
+                }).eq("post_id", post_id).execute()
+                
+                updated_data = getattr(update_resp, "data", None)
+                if not isinstance(updated_data, list) or len(updated_data) == 0:
+                    logger.warning(f"Failed to update like_count for post {post_id}")
+                    return None
+                
+                logger.info(f"User {user_id} unliked post {post_id}, new count: {new_count}")
+                return {
+                    "liked": False,
+                    "like_count": new_count,
+                }
+            else:
+                # Like: create the like and increment count
+                # Check one more time to prevent race conditions
+                final_check = self._client.table("post_likes").select("id").eq(
+                    "post_id", post_id
+                ).eq("user_id", user_id).limit(1).execute()
+                
+                final_check_data = getattr(final_check, "data", None)
+                if isinstance(final_check_data, list) and len(final_check_data) > 0:
+                    # Like was created between our checks (race condition)
+                    # Just return the current state
+                    logger.info(f"Like already exists for post {post_id} by user {user_id} (race condition)")
+                    return {
+                        "liked": True,
+                        "like_count": current_like_count,
+                    }
+                
+                # Insert the like
+                try:
+                    insert_resp = self._client.table("post_likes").insert({
+                        "post_id": post_id,
+                        "user_id": user_id,
+                    }).execute()
+                    
+                    inserted_data = getattr(insert_resp, "data", None)
+                    if not isinstance(inserted_data, list) or len(inserted_data) == 0:
+                        # Insert failed, check if it's because of unique constraint
+                        verify_like = self._client.table("post_likes").select("id").eq(
+                            "post_id", post_id
+                        ).eq("user_id", user_id).limit(1).execute()
+                        verify_data = getattr(verify_like, "data", None)
+                        if isinstance(verify_data, list) and len(verify_data) > 0:
+                            # Like exists now (unique constraint prevented duplicate)
+                            logger.info(f"Like already exists for post {post_id} by user {user_id}")
+                            return {
+                                "liked": True,
+                                "like_count": current_like_count,
+                            }
+                        logger.warning(f"Failed to insert like for post {post_id} by user {user_id}")
+                        return None
+                except Exception as insert_exc:
+                    # Handle unique constraint violation or other errors
+                    error_str = str(insert_exc).lower()
+                    if "unique" in error_str or "duplicate" in error_str or "violates" in error_str:
+                        # Like already exists (unique constraint prevented duplicate)
+                        logger.info(f"Like already exists for post {post_id} by user {user_id} (unique constraint)")
+                        # Verify the like exists and return current state
+                        verify_like = self._client.table("post_likes").select("id").eq(
+                            "post_id", post_id
+                        ).eq("user_id", user_id).limit(1).execute()
+                        verify_data = getattr(verify_like, "data", None)
+                        if isinstance(verify_data, list) and len(verify_data) > 0:
+                            return {
+                                "liked": True,
+                                "like_count": current_like_count,
+                            }
+                    # Re-raise if it's not a unique constraint error
+                    logger.exception(f"Unexpected error inserting like: {insert_exc}")
+                    raise
+                
+                # Increment like_count in posts table
+                new_count = current_like_count + 1
+                update_resp = self._client.table("posts").update({
+                    "like_count": new_count
+                }).eq("post_id", post_id).execute()
+                
+                updated_data = getattr(update_resp, "data", None)
+                if not isinstance(updated_data, list) or len(updated_data) == 0:
+                    logger.warning(f"Failed to update like_count for post {post_id}")
+                    # Rollback: delete the like we just created
+                    try:
+                        self._client.table("post_likes").delete().eq(
+                            "post_id", post_id
+                        ).eq("user_id", user_id).execute()
+                    except:
+                        pass
+                    return None
+                
+                logger.info(f"User {user_id} liked post {post_id}, new count: {new_count}")
+                return {
+                    "liked": True,
+                    "like_count": new_count,
+                }
+        except Exception as exc:
+            logger.exception(f"Failed to toggle like for post {post_id}: {exc}")
+            return None
+    
+    def get_post_like_count(self, post_id: str) -> int:
+        """Get like count for a post from the posts table."""
+        try:
+            resp = self._client.table("posts").select("like_count").eq(
+                "post_id", post_id
+            ).limit(1).execute()
+            data = getattr(resp, "data", None)
+            if isinstance(data, list) and data:
+                return data[0].get("like_count", 0) or 0
+            return 0
+        except Exception as exc:
+            logger.exception(f"Failed to get like count for post {post_id}: {exc}")
+            return 0
+    
+    def is_post_liked_by_user(self, post_id: str, user_id: str) -> bool:
+        """Check if a post is liked by a user."""
+        try:
+            resp = self._client.table("post_likes").select("id").eq(
+                "post_id", post_id
+            ).eq("user_id", user_id).limit(1).execute()
+            data = getattr(resp, "data", None)
+            return isinstance(data, list) and len(data) > 0
+        except Exception as exc:
+            logger.exception(f"Failed to check like status: {exc}")
+            return False
+    
+    def get_post_repost_count(self, post_id: str) -> int:
+        """Get repost count for a post from the posts table."""
+        try:
+            resp = self._client.table("posts").select("repost_count").eq(
+                "post_id", post_id
+            ).limit(1).execute()
+            data = getattr(resp, "data", None)
+            if isinstance(data, list) and data:
+                return data[0].get("repost_count", 0) or 0
+            return 0
+        except Exception as exc:
+            logger.exception(f"Failed to get repost count for post {post_id}: {exc}")
+            return 0
+    
+    def is_post_reposted_by_user(self, post_id: str, user_id: str) -> bool:
+        """Check if a post is reposted by a user."""
+        try:
+            resp = self._client.table("posts").select("post_id").eq(
+                "reposted_post_id", post_id
+            ).eq("user_id", user_id).limit(1).execute()
+            data = getattr(resp, "data", None)
+            return isinstance(data, list) and len(data) > 0
+        except Exception as exc:
+            logger.exception(f"Failed to check repost status: {exc}")
+            return False
+    
+    def create_repost(
+        self,
+        user_id: str,
+        subthread_id: str,
+        original_post_id: str,
+        content: str = "",
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Create a repost (new post that references the original).
+        Increments the repost_count in the original post.
+        
+        Args:
+            user_id: UUID of the user creating the repost
+            subthread_id: UUID of the subthread
+            original_post_id: UUID of the original post being reposted
+            content: Optional comment/content on the repost
+            
+        Returns:
+            Created repost data with embedded original post or None on failure
+        """
+        try:
+            # Get original post
+            original_post = self.get_post_by_id(original_post_id)
+            if not original_post:
+                logger.warning(f"Original post {original_post_id} not found")
+                return None
+            
+            # Get current repost_count
+            current_repost_count = original_post.get("repost_count", 0) or 0
+            
+            # Create repost
+            title = original_post.get("title", "")
+            payload = {
+                "user_id": user_id,
+                "subthread_id": subthread_id,
+                "title": title,
+                "content": content or "",
+                "reposted_post_id": original_post_id,
+            }
+            
+            resp = self._client.table("posts").insert(payload).execute()
+            data = getattr(resp, "data", None)
+            if isinstance(data, list) and data:
+                repost = data[0]
+                
+                # Increment repost_count in original post
+                new_repost_count = current_repost_count + 1
+                self._client.table("posts").update({
+                    "repost_count": new_repost_count
+                }).eq("post_id", original_post_id).execute()
+                
+                # Add author info to repost
+                repost = self._enrich_post_with_author(repost)
+                # Add embedded original post (with updated repost_count)
+                original_post["repost_count"] = new_repost_count
+                repost["reposted_post"] = original_post
+                logger.info(f"Created repost by user {user_id}")
+                return repost
+            return None
+        except Exception as exc:
+            logger.exception(f"Failed to create repost: {exc}")
+            return None
+    
+    def _enrich_post_with_author(self, post: Dict[str, Any]) -> Dict[str, Any]:
+        """Helper to add author information to a post."""
+        try:
+            user_id = post.get("user_id")
+            if not user_id:
+                return post
+            
+            # Get author info
+            resp = self._client.table("user_info").select(
+                "email, first_name, last_name"
+            ).eq("id", user_id).limit(1).execute()
+            author_data = getattr(resp, "data", None)
+            
+            if isinstance(author_data, list) and author_data:
+                author = author_data[0]
+                post["author_email"] = author.get("email")
+                post["author_first_name"] = author.get("first_name")
+                post["author_last_name"] = author.get("last_name")
+            
+            return post
+        except Exception as exc:
+            logger.exception(f"Failed to enrich post with author: {exc}")
+            return post

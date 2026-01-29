@@ -74,6 +74,21 @@ class _ThreadsTabState extends State<ThreadsTab> {
     });
   }
 
+  /// Parses API count (may be int or double from JSON) to int. Always show when != 0.
+  int _toInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return 0;
+  }
+
+  /// Converts any Map (e.g. Map<dynamic, dynamic> from JSON) to Map<String, dynamic>.
+  Map<String, dynamic>? _toPostMap(dynamic v) {
+    if (v == null) return null;
+    if (v is Map) return Map<String, dynamic>.from(v);
+    return null;
+  }
+
   Post _mapBackendPostToFrontendPost(Map<String, dynamic> backendPost) {
     final authorFirstName = backendPost['author_first_name'] as String?;
     final authorLastName = backendPost['author_last_name'] as String?;
@@ -107,6 +122,19 @@ class _ThreadsTabState extends State<ThreadsTab> {
                 : '${diff.inDays}d';
 
     final text = backendPost['content'] as String? ?? '';
+    // Backend uses snake_case; support both so counts and state always display after reload
+    final likeCount = _toInt(backendPost['like_count'] ?? backendPost['likeCount']);
+    final repostCount = _toInt(backendPost['repost_count'] ?? backendPost['repostCount']);
+    final replyCount = _toInt(backendPost['reply_count'] ?? backendPost['replyCount']);
+    final likedByCurrentUser = backendPost['liked_by_current_user'] == true || backendPost['likedByCurrentUser'] == true;
+    final repostedByCurrentUser = backendPost['reposted_by_current_user'] == true || backendPost['repostedByCurrentUser'] == true;
+    
+    // Embedded repost: accept snake_case or camelCase; API layer deep-normalizes so this is Map<String, dynamic>.
+    Post? repostedPost;
+    final repostedMap = _toPostMap(backendPost['reposted_post']) ?? _toPostMap(backendPost['repostedPost']);
+    if (repostedMap != null && repostedMap.isNotEmpty) {
+      repostedPost = _mapBackendPostToFrontendPost(repostedMap);
+    }
 
     return Post(
       id: backendPost['post_id'] as String? ?? '',
@@ -120,11 +148,12 @@ class _ThreadsTabState extends State<ThreadsTab> {
       text: text,
       createdAt: createdAt,
       timestampLabel: timestampLabel,
-      likeCount: 0,
-      replyCount: 0,
-      repostCount: 0,
-      likedByCurrentUser: false,
-      repostedByCurrentUser: false,
+      likeCount: likeCount,
+      replyCount: replyCount,
+      repostCount: repostCount,
+      likedByCurrentUser: likedByCurrentUser,
+      repostedByCurrentUser: repostedByCurrentUser,
+      repostedPost: repostedPost,
     );
   }
 
@@ -168,10 +197,14 @@ class _ThreadsTabState extends State<ThreadsTab> {
     });
 
     try {
+      print('🔄 Loading feed...');
       final subthreadId = await _getOrCreateDefaultSubthread();
+      print('📌 Subthread ID: $subthreadId');
+      
       if (!mounted) return;
 
       if (subthreadId == null) {
+        print('⚠️ No subthread found, using mock posts');
         if (mounted) {
           setState(() {
             _posts.clear();
@@ -179,6 +212,7 @@ class _ThreadsTabState extends State<ThreadsTab> {
             _filteredPosts = List.from(_posts);
             _isLoading = false;
           });
+          print('✅ Loaded ${_posts.length} mock posts');
         }
         return;
       }
@@ -194,9 +228,29 @@ class _ThreadsTabState extends State<ThreadsTab> {
       );
 
       if (mounted) {
-        final posts = postsData
-            .map((p) => _mapBackendPostToFrontendPost(p))
+        print('📥 Received ${postsData.length} posts from API');
+        
+        // Normalize so each post is Map<String, dynamic> (JSON can give Map<dynamic, dynamic>)
+        final normalizedPosts = postsData
+            .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
             .toList();
+        
+        print('📥 Normalized ${normalizedPosts.length} posts');
+        
+        final posts = normalizedPosts
+            .map((p) {
+              try {
+                return _mapBackendPostToFrontendPost(p);
+              } catch (e) {
+                print('⚠️ Error mapping post: $e');
+                print('⚠️ Post data: $p');
+                rethrow;
+              }
+            })
+            .toList();
+        
+        print('✅ Mapped ${posts.length} posts successfully');
+        
         setState(() {
           _posts.clear();
           _posts.addAll(posts);
@@ -232,7 +286,8 @@ class _ThreadsTabState extends State<ThreadsTab> {
     }
   }
 
-  void _handleLike(Post post) {
+  Future<void> _handleLike(Post post) async {
+    // Optimistically update UI
     setState(() {
       final index = _posts.indexWhere((p) => p.id == post.id);
       if (index != -1) {
@@ -243,23 +298,144 @@ class _ThreadsTabState extends State<ThreadsTab> {
               ? currentPost.likeCount - 1
               : currentPost.likeCount + 1,
         );
+        // Update filtered posts to keep them in sync
+        final filteredIndex = _filteredPosts.indexWhere((p) => p.id == post.id);
+        if (filteredIndex != -1) {
+          _filteredPosts[filteredIndex] = _posts[index];
+        }
       }
     });
-  }
 
-  void _handleRepost(Post post) {
-    setState(() {
-      final index = _posts.indexWhere((p) => p.id == post.id);
-      if (index != -1) {
-        final currentPost = _posts[index];
-        _posts[index] = currentPost.copyWith(
-          repostedByCurrentUser: !currentPost.repostedByCurrentUser,
-          repostCount: currentPost.repostedByCurrentUser
-              ? currentPost.repostCount - 1
-              : currentPost.repostCount + 1,
+    // Call backend API
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final apiService = ApiService();
+      apiService.setToken(authProvider.session?.accessToken);
+
+      final response = await apiService.toggleLike(post.id);
+      
+      // Update with actual response
+      if (mounted) {
+        setState(() {
+          final index = _posts.indexWhere((p) => p.id == post.id);
+          if (index != -1) {
+            _posts[index] = _posts[index].copyWith(
+              likedByCurrentUser: response['liked'] as bool,
+              likeCount: response['like_count'] as int,
+            );
+            final filteredIndex = _filteredPosts.indexWhere((p) => p.id == post.id);
+            if (filteredIndex != -1) {
+              _filteredPosts[filteredIndex] = _posts[index];
+            }
+          }
+        });
+      }
+    } catch (e) {
+      // Revert on error
+      if (mounted) {
+        setState(() {
+          final index = _posts.indexWhere((p) => p.id == post.id);
+          if (index != -1) {
+            final currentPost = _posts[index];
+            _posts[index] = currentPost.copyWith(
+              likedByCurrentUser: !currentPost.likedByCurrentUser,
+              likeCount: currentPost.likedByCurrentUser
+                  ? currentPost.likeCount + 1
+                  : currentPost.likeCount - 1,
+            );
+            final filteredIndex = _filteredPosts.indexWhere((p) => p.id == post.id);
+            if (filteredIndex != -1) {
+              _filteredPosts[filteredIndex] = _posts[index];
+            }
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update like: ${e.toString()}')),
         );
       }
-    });
+    }
+  }
+
+  Future<void> _handleRepost(Post post) async {
+    // Get current subthread ID
+    final subthreadId = await _getOrCreateDefaultSubthread();
+    if (subthreadId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to repost: No subthread available')),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Repost'),
+        content: const Text('Create a repost of this thread?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Repost'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Creating repost...')),
+      );
+    }
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final apiService = ApiService();
+      apiService.setToken(authProvider.session?.accessToken);
+
+      final repostData = await apiService.createRepost(
+        postId: post.id,
+        subthreadId: subthreadId,
+      );
+
+      // Map repost to Post model and add to feed
+      if (mounted) {
+        final repost = _mapBackendPostToFrontendPost(repostData);
+        setState(() {
+          _posts.insert(0, repost);
+          _filteredPosts.insert(0, repost);
+        });
+
+        // Update original post repost count
+        final index = _posts.indexWhere((p) => p.id == post.id);
+        if (index != -1) {
+          _posts[index] = _posts[index].copyWith(
+            repostCount: _posts[index].repostCount + 1,
+            repostedByCurrentUser: true,
+          );
+          final filteredIndex = _filteredPosts.indexWhere((p) => p.id == post.id);
+          if (filteredIndex != -1) {
+            _filteredPosts[filteredIndex] = _posts[index];
+          }
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Repost created successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create repost: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   void _handleReply(Post post) {
@@ -284,6 +460,91 @@ class _ThreadsTabState extends State<ThreadsTab> {
     setState(() {
       _expandedPostId = _expandedPostId == post.id ? null : post.id;
     });
+  }
+
+  void _handleMoreOptions(Post post) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: SyntrakColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: SyntrakColors.error),
+                title: Text(
+                  'Remove post',
+                  style: SyntrakTypography.bodyLarge.copyWith(
+                    color: SyntrakColors.error,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmRemovePost(post);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemovePost(Post post) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove post'),
+        content: const Text(
+          'Are you sure you want to remove this post? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: SyntrakColors.error,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final apiService = ApiService();
+      apiService.setToken(authProvider.session?.accessToken);
+
+      await apiService.deletePost(post.id);
+
+      if (mounted) {
+        setState(() {
+          _posts.removeWhere((p) => p.id == post.id);
+          _filteredPosts.removeWhere((p) => p.id == post.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post removed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove post: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   List<Post> _generateMockPosts() {
@@ -370,25 +631,57 @@ class _ThreadsTabState extends State<ThreadsTab> {
           child: RefreshIndicator(
             onRefresh: _handleRefresh,
             color: SyntrakColors.primary,
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(
-                horizontal: SyntrakSpacing.md,
-                vertical: SyntrakSpacing.sm,
-              ),
-              itemCount: _filteredPosts.length,
-              itemBuilder: (context, index) {
-                final post = _filteredPosts[index];
-                return ThreadCard(
-                  post: post,
-                  onTap: () => _handlePostTap(post),
-                  onLike: _handleLike,
-                  onRepost: _handleRepost,
-                  onReply: _handleReply,
-                  onShare: _handleShare,
-                );
-              },
-            ),
+            child: _filteredPosts.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.forum_outlined,
+                            size: 64,
+                            color: SyntrakColors.textTertiary,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No posts yet',
+                            style: SyntrakTypography.headlineSmall.copyWith(
+                              color: SyntrakColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Pull down to refresh or create a new post',
+                            style: SyntrakTypography.bodyMedium.copyWith(
+                              color: SyntrakColors.textTertiary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: SyntrakSpacing.md,
+                      vertical: SyntrakSpacing.sm,
+                    ),
+                    itemCount: _filteredPosts.length,
+                    itemBuilder: (context, index) {
+                      final post = _filteredPosts[index];
+                      return ThreadCard(
+                        post: post,
+                        onTap: () => _handlePostTap(post),
+                        onLike: _handleLike,
+                        onRepost: _handleRepost,
+                        onReply: _handleReply,
+                        onShare: _handleShare,
+                        onMoreOptions: _handleMoreOptions,
+                      );
+                    },
+                  ),
           ),
         ),
       ],
