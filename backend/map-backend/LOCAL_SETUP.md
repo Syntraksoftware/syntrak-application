@@ -6,6 +6,43 @@
 - pip (Python package manager)
 - virtualenv or venv (recommended)
 
+## Docker Quick Start (Map + Redis)
+
+From `backend/`, boot Redis and Map Backend containers:
+
+```powershell
+cd backend
+docker compose up -d --build redis map-backend
+```
+
+Check service status:
+
+```powershell
+docker compose ps redis map-backend
+```
+
+View live logs for both containers:
+
+```powershell
+docker compose logs -f redis map-backend
+```
+
+Useful log options:
+
+```powershell
+# show last 100 lines, then follow
+docker compose logs -f --tail 100 redis map-backend
+
+# include timestamps
+docker compose logs -f -t redis map-backend
+```
+
+Stop only these two containers:
+
+```powershell
+docker compose stop redis map-backend
+```
+
 ## Setup Steps
 
 ### 1. Navigate to backend/map-backend directory
