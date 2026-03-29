@@ -1,5 +1,6 @@
 """Configuration for Map Backend (FastAPI)."""
 import os
+import json
 from functools import lru_cache
 from dotenv import load_dotenv
 
@@ -11,6 +12,13 @@ def _require_env(name: str) -> str:
     if not value:
         raise ValueError(f"Required environment variable {name} is not set")
     return value
+
+
+def _get_bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 class Config:
@@ -49,6 +57,17 @@ class Config:
     STATIC_MAP_WIDTH = int(os.getenv("STATIC_MAP_WIDTH", 600))
     STATIC_MAP_HEIGHT = int(os.getenv("STATIC_MAP_HEIGHT", 400))
     STATIC_MAP_ZOOM = int(os.getenv("STATIC_MAP_ZOOM", 12))
+
+    # Redis-backed rate limiter
+    RATE_LIMIT_ENABLED = _get_bool_env("RATE_LIMIT_ENABLED", True)
+    RATE_LIMIT_REDIS_URL = os.getenv("RATE_LIMIT_REDIS_URL", "redis://localhost:6379/0")
+    RATE_LIMIT_NAMESPACE = os.getenv("RATE_LIMIT_NAMESPACE", "map-backend")
+    RATE_LIMIT_FAIL_OPEN = _get_bool_env("RATE_LIMIT_FAIL_OPEN", True)
+    RATE_LIMIT_DEFAULT_LIMIT = int(os.getenv("RATE_LIMIT_DEFAULT_LIMIT", 240))
+    RATE_LIMIT_DEFAULT_WINDOW_SECONDS = int(
+        os.getenv("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60)
+    )
+    RATE_LIMIT_POLICIES = json.loads(os.getenv("RATE_LIMIT_POLICIES", "[]"))
 
 
 @lru_cache(maxsize=1)
