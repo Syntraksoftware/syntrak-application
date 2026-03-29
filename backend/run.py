@@ -47,8 +47,11 @@ SERVICES = {
     }
 }
 
-# Path to shared venv
-VENV_PYTHON = backend_directory / ".venv" / "bin" / "python"
+# Path to shared venv (cross-platform: Scripts on Windows, bin on Unix)
+if sys.platform == "win32":
+    VENV_PYTHON = backend_directory / ".venv" / "Scripts" / "python.exe"
+else:
+    VENV_PYTHON = backend_directory / ".venv" / "bin" / "python"
 
 def start_service(service_name):
     """Start a single service using the shared venv."""
