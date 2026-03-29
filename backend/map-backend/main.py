@@ -10,12 +10,18 @@ Service for static map images and elevation correction.
 """
 import logging
 from contextlib import asynccontextmanager
+import os
+import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Add backend directory to path for shared imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from config import get_config
 from services.supabase_client import initialize_map_client
+from shared.rate_limiter import add_redis_rate_limiter
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +31,47 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 config = get_config()
+
+
+def _get_rate_limit_policies() -> list[dict]:
+    """Route-level default policies. Specific routes should come first."""
+    default_policies = [
+        {
+            "path_pattern": "/api/maps/static/image",
+            "methods": ["POST"],
+            "limit": 30,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/maps/dynamic/html",
+            "methods": ["POST"],
+            "limit": 40,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/elevation/lookup",
+            "methods": ["POST"],
+            "limit": 20,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/elevation/point",
+            "methods": ["GET"],
+            "limit": 120,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/maps/*",
+            "methods": ["GET", "POST"],
+            "limit": 100,
+            "window_seconds": 60,
+        },
+    ]
+
+    if config.RATE_LIMIT_POLICIES:
+        return config.RATE_LIMIT_POLICIES
+
+    return default_policies
 
 
 @asynccontextmanager
@@ -52,6 +99,24 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+if config.RATE_LIMIT_ENABLED:
+    add_redis_rate_limiter(
+        app,
+        redis_url=config.RATE_LIMIT_REDIS_URL,
+        namespace=config.RATE_LIMIT_NAMESPACE,
+        policies=_get_rate_limit_policies(),
+        default_limit=config.RATE_LIMIT_DEFAULT_LIMIT,
+        default_window_seconds=config.RATE_LIMIT_DEFAULT_WINDOW_SECONDS,
+        fail_open=config.RATE_LIMIT_FAIL_OPEN,
+    )
+    logger.info(
+        "Redis rate limiter enabled (namespace=%s, redis=%s)",
+        config.RATE_LIMIT_NAMESPACE,
+        config.RATE_LIMIT_REDIS_URL,
+    )
+else:
+    logger.warning("Redis rate limiter disabled via RATE_LIMIT_ENABLED=false")
 
 # CORS
 app.add_middleware(
