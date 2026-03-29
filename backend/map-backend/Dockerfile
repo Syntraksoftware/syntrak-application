@@ -13,13 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt ./
+COPY requirements.txt ./requirements-shared.txt
+COPY map-backend/requirements.txt ./requirements-service.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-shared.txt && \
+    pip install --no-cache-dir -r requirements-service.txt
 
-# Copy application code
-COPY . .
+# Copy application and shared code
+COPY map-backend/ ./
+COPY shared/ ./shared/
 
 RUN useradd --create-home --shell /usr/sbin/nologin appuser && chown -R appuser:appuser /app
 USER appuser
