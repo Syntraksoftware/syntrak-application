@@ -12,6 +12,12 @@ This file contains cURL commands to test all endpoints in the Map Backend API.
 
 If you are on Windows, use the dedicated PowerShell examples/scripts below.
 
+For Windows PowerShell 5.1, add this once per session to suppress the web-page script parsing warning:
+
+```powershell
+$PSDefaultParameterValues['Invoke-WebRequest:UseBasicParsing'] = $true
+```
+
 ## Prerequisites
 
 - Map Backend running on `http://localhost:5200`
@@ -344,6 +350,104 @@ If the Google Maps API key is invalid or the API service is unavailable, you may
 }
 ```
 
+## Rate Limiter Testing
+
+Use these tests to confirm Redis-backed limits are enforced and that 429 responses include rate-limit headers.
+
+### Prerequisites
+
+- Redis is running and reachable by the service (`RATE_LIMIT_REDIS_URL`)
+- `RATE_LIMIT_ENABLED=true`
+- Map Backend restarted after any `.env` changes
+
+If every request returns `200` and `X-RateLimit-Remaining` is blank, the service is usually in fail-open mode because Redis is not reachable. Verify Redis is up and consider setting `RATE_LIMIT_FAIL_OPEN=false` temporarily to surface configuration problems as `503` responses instead of silent pass-through.
+
+### Quick Validation: Headers on Allowed Request
+
+```bash
+curl -i -X GET "${MAP_BACKEND_URL}/api/elevation/point?lat=40.7128&lng=-74.0060"
+```
+
+Expected headers include:
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+### 429 Test (Bash/macOS/Linux)
+
+This endpoint defaults to `30/min` in this service (`POST /api/maps/static/image`), so 35 requests should trigger throttling.
+
+```bash
+for i in $(seq 1 35); do
+  code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "${MAP_BACKEND_URL}/api/maps/static/image" \
+    -H "Content-Type: application/json" \
+    -d '{"center_lat":37.7749,"center_lng":-122.4194,"zoom":12,"width":600,"height":400}')
+  echo "request=$i status=$code"
+done
+```
+
+You should see early responses as `200`, then `429` once the limit is exceeded.
+
+Inspect a throttled response:
+
+```bash
+curl -i -X POST "${MAP_BACKEND_URL}/api/maps/static/image" \
+  -H "Content-Type: application/json" \
+  -d '{"center_lat":37.7749,"center_lng":-122.4194,"zoom":12,"width":600,"height":400}'
+```
+
+Expected status/body snippet:
+
+```json
+{
+  "detail": "Rate limit exceeded",
+  "limit": 30,
+  "window_seconds": 60,
+  "retry_after": 0
+}
+```
+
+Expected headers on 429:
+- `Retry-After`
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining: 0`
+- `X-RateLimit-Reset`
+
+### 429 Test (Windows PowerShell)
+
+```powershell
+$BASE_URL = "http://localhost:5200"
+$body = @{
+  center_lat = 37.7749
+  center_lng = -122.4194
+  zoom = 12
+  width = 600
+  height = 400
+} | ConvertTo-Json -Depth 5 -Compress
+
+for ($i = 1; $i -le 35; $i++) {
+  try {
+    $resp = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$BASE_URL/api/maps/static/image" -ContentType "application/json" -Body $body
+    Write-Host "request=$i status=$($resp.StatusCode) remaining=$($resp.Headers['X-RateLimit-Remaining'])"
+  } catch {
+    $status = [int]$_.Exception.Response.StatusCode
+    $headers = $_.Exception.Response.Headers
+    Write-Host "request=$i status=$status retry_after=$($headers['Retry-After']) remaining=$($headers['X-RateLimit-Remaining'])"
+  }
+}
+```
+
+### Optional Fast Test Profile (Lower Limits)
+
+To test faster with fewer requests, set custom policies in `.env` and restart:
+
+```env
+RATE_LIMIT_POLICIES=[{"path_pattern":"/api/maps/static/image","methods":["POST"],"limit":3,"window_seconds":30}]
+```
+
+Then run 5 requests instead of 35 and expect `429` by request 4.
+
 ## Testing Script
 
 ### Option A: macOS/Linux (Bash)
@@ -434,7 +538,7 @@ Step "4. Static Map URL (POST)"
 Invoke-RestMethod -Method Post -Uri "$BASE_URL/api/maps/static" -ContentType "application/json" -Body $staticBody | ConvertTo-Json -Depth 10
 
 Step "5. Static Map Image (POST)"
-Invoke-WebRequest -Method Post -Uri "$BASE_URL/api/maps/static/image" -ContentType "application/json" -Body $staticBody -OutFile "map_image.png"
+Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$BASE_URL/api/maps/static/image" -ContentType "application/json" -Body $staticBody -OutFile "map_image.png"
 Write-Host "Saved map_image.png"
 
 $dynamicBody = @{
@@ -456,7 +560,7 @@ $dynamicBody = @{
 } | ConvertTo-Json -Depth 10 -Compress
 
 Step "6. Dynamic Map HTML (POST)"
-Invoke-WebRequest -Method Post -Uri "$BASE_URL/api/maps/dynamic/html" -ContentType "application/json" -Body $dynamicBody -OutFile "dynamic_map.html"
+Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$BASE_URL/api/maps/dynamic/html" -ContentType "application/json" -Body $dynamicBody -OutFile "dynamic_map.html"
 Write-Host "Saved dynamic_map.html"
 
 Step "7. Dynamic Map JSON (POST)"

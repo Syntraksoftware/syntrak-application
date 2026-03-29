@@ -18,16 +18,21 @@ cd backend/map-backend
 
 ```bash
 # Create virtual environment
-python3 -m venv venv
+python3 -m venv .venv
 
 # Activate virtual environment
 # On macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 
 # On Windows:
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process // Bypass Power Shell security restriction
-venv\Scripts\Activate.ps1
+py -3 -m venv .venv
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+.\.venv\Scripts\Activate.ps1
 ```
+
+**Windows notes:**
+- In PowerShell, always prefix local script paths with `.\`.
+- Prefer `py -3` on Windows over `python3` for consistent interpreter selection.
 
 ### 3. Install dependencies
 
@@ -120,18 +125,18 @@ This happens when installing packages globally instead of in the virtual environ
 
 ```cmd
 # Command Prompt
-venv\Scripts\activate.bat
+.venv\Scripts\activate.bat
 pip install -r requirements.txt
 
 # PowerShell
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
-venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Verify activation by checking for `(venv)` in your prompt:
+Verify activation by checking for `(.venv)` in your prompt:
 ```
-(venv) D:\...\map-backend>
+(.venv) D:\...\map-backend>
 ```
 
 ### Google Maps: "RefererNotAllowedMapError" or "This page can't load Google Maps correctly"
@@ -201,13 +206,13 @@ Make sure you're using the correct command for your OS:
 
 ```bash
 # macOS/Linux
-source venv/bin/activate
+source .venv/bin/activate
 
 # Windows (CMD)
-venv\Scripts\activate.bat
+.venv\Scripts\activate.bat
 
 # Windows (PowerShell)
-venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
 ## Development Commands
@@ -291,7 +296,7 @@ If you want to run all backends locally:
 
 ```bash
 cd backend/map-backend
-source venv/bin/activate
+source .venv/bin/activate
 python main.py
 ```
 
@@ -299,7 +304,7 @@ python main.py
 
 ```bash
 cd backend/activity-backend
-source venv/bin/activate
+source .venv/bin/activate
 python main.py
 ```
 
@@ -307,7 +312,7 @@ python main.py
 
 ```bash
 cd backend/community-backend
-source venv/bin/activate
+source .venv/bin/activate
 python main.py
 ```
 
