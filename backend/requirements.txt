@@ -26,3 +26,6 @@ httpx>=0.27.0
 
 # Image Processing (for maps)
 pillow>=10.0.0
+
+# Caching & Rate Limiting
+redis>=5.0.0
