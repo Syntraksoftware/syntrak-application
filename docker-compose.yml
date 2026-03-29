@@ -1,4 +1,9 @@
 services:
+  redis:
+    extends:
+      file: ./backend/docker-compose.yml
+      service: redis
+
   main-backend:
     extends:
       file: ./backend/docker-compose.yml
@@ -27,6 +32,7 @@ services:
     ports:
       - "8088:80"
     depends_on:
+      - redis
       - main-backend
       - community-backend
       - activity-backend

@@ -1,4 +1,11 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: syntrak-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
   main-backend:
     build:
       context: ./main-backend
@@ -61,4 +68,6 @@ services:
       - PORT=5200
     ports:
       - "5200:5200"
+    depends_on:
+      - redis
     restart: unless-stopped
