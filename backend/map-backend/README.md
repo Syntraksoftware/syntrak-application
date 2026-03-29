@@ -7,6 +7,7 @@ Map Backend is a FastAPI microservice that provides static map image generation 
 - **Static Map Generation**: Generate static map images with optional paths and markers using the Google Maps Static API
 - **Elevation Lookup**: Get elevation data for coordinates using the Google Maps Elevation API
 - **JWT Authentication**: Optional authentication for API tracking
+- **Redis Rate Limiting**: Per-method and per-route throttling with shared middleware
 - **Docker Support**: Fully containerized with Docker
 
 ## Tech Stack
@@ -134,9 +135,30 @@ curl "http://localhost:5200/api/elevation/point?lat=37.7749&lng=-122.4194"
 | `FASTAPI_ENV` | Environment (development/production) | development |
 | `HOST` | Server host | 127.0.0.1 |
 | `PORT` | Server port | 5200 |
+| `RATE_LIMIT_ENABLED` | Toggle Redis-backed rate limiting | true |
+| `RATE_LIMIT_REDIS_URL` | Redis connection URL used by limiter | redis://localhost:6379/0 |
+| `RATE_LIMIT_NAMESPACE` | Namespace for distributed counter keys | map-backend |
+| `RATE_LIMIT_FAIL_OPEN` | Allow requests if Redis is temporarily unavailable | true |
+| `RATE_LIMIT_DEFAULT_LIMIT` | Fallback max requests per window for unmatched routes | 240 |
+| `RATE_LIMIT_DEFAULT_WINDOW_SECONDS` | Fallback window size in seconds | 60 |
+| `RATE_LIMIT_POLICIES` | Optional JSON array overriding route/method policies | [] |
 | `STATIC_MAP_WIDTH` | Default map width | 600 |
 | `STATIC_MAP_HEIGHT` | Default map height | 400 |
 | `STATIC_MAP_ZOOM` | Default zoom level | 12 |
+
+### Rate Limit Policy Overrides
+
+You can fully override built-in route limits by setting `RATE_LIMIT_POLICIES` as JSON:
+
+```env
+RATE_LIMIT_POLICIES=[{"path_pattern":"/api/elevation/lookup","methods":["POST"],"limit":20,"window_seconds":60},{"path_pattern":"/api/maps/*","methods":["GET","POST"],"limit":100,"window_seconds":60}]
+```
+
+Policy fields:
+- `path_pattern`: route matcher with `*` wildcard support
+- `methods`: optional list of HTTP methods (`GET`, `POST`, etc.)
+- `limit`: max requests allowed in the window
+- `window_seconds`: length of the window in seconds
 
 ## Development
 
