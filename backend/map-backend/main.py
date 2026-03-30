@@ -39,31 +39,31 @@ def _get_rate_limit_policies() -> list[dict]:
         {
             "path_pattern": "/api/maps/static/image",
             "methods": ["POST"],
-            "limit": 30,
+            "limit": 10,
             "window_seconds": 60,
         },
         {
             "path_pattern": "/api/maps/dynamic/html",
             "methods": ["POST"],
-            "limit": 40,
+            "limit": 10,
             "window_seconds": 60,
         },
         {
             "path_pattern": "/api/elevation/lookup",
             "methods": ["POST"],
-            "limit": 20,
+            "limit": 30,
             "window_seconds": 60,
         },
         {
             "path_pattern": "/api/elevation/point",
             "methods": ["GET"],
-            "limit": 120,
+            "limit": 60,
             "window_seconds": 60,
         },
         {
             "path_pattern": "/api/maps/*",
             "methods": ["GET", "POST"],
-            "limit": 100,
+            "limit": 20,
             "window_seconds": 60,
         },
     ]
