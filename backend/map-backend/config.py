@@ -1,62 +1,86 @@
 """Configuration for Map Backend (FastAPI)."""
-import os
+
 import json
 from functools import lru_cache
-from dotenv import load_dotenv
+from typing import Literal
 
-load_dotenv()
-
-
-def _require_env(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise ValueError(f"Required environment variable {name} is not set")
-    return value
+from pydantic import computed_field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _get_bool_env(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+class Config(BaseSettings):
+    """Typed settings loaded from environment variables."""
 
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-class Config:
-    """Base configuration."""
+    MAP_STORAGE_BACKEND: Literal["supabase", "postgis"] = "supabase"
 
-    # Supabase
-    SUPABASE_URL = _require_env("SUPABASE_URL")
-    SUPABASE_SERVICE_ROLE_KEY = _require_env("SUPABASE_SERVICE_ROLE_KEY")
+    SUPABASE_URL: str | None = None
+    SUPABASE_SERVICE_ROLE_KEY: str | None = None
 
-    # JWT
-    JWT_SECRET = _require_env("JWT_SECRET")
-    JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-
-    # FastAPI / server
-    FASTAPI_ENV = os.getenv("FASTAPI_ENV", "development")
-    DEBUG = FASTAPI_ENV == "development"
-    PORT = int(os.getenv("PORT", 5200))
-    # Bind host: default to localhost for safety; override with HOST=0.0.0.0 when needed
-    HOST = os.getenv("HOST", "127.0.0.1")
-
-    # CORS
-    CORS_ORIGINS = [
+    POSTGIS_DSN: str | None = None
+    POSTGIS_HOST: str = "postgis"
+    POSTGIS_PORT: int = 5432
+    POSTGIS_DB: str = "syntrak"
+    POSTGIS_USER: str = "syntrak"
+    POSTGIS_PASSWORD: str = "syntrak_local_dev"
+    JWT_SECRET: str
+    JWT_ALGORITHM: str = "HS256"
+    FASTAPI_ENV: str = "development"
+    PORT: int = 5200
+    HOST: str = "127.0.0.1"
+    CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:8080",
         "http://localhost:5173",
     ]
+    GOOGLE_MAPS_API_KEY: str
+    GOOGLE_MAPS_STATIC_API_URL: str = "https://maps.googleapis.com/maps/api/staticmap"
+    GOOGLE_MAPS_ELEVATION_API_URL: str = "https://maps.googleapis.com/maps/api/elevation/json"
+    GOOGLE_MAPS_JS_API_URL: str = "https://maps.googleapis.com/maps/api/js"
+    GOOGLE_MAPS_MAP_ID: str = ""
+    STATIC_MAP_WIDTH: int = 600
+    STATIC_MAP_HEIGHT: int = 400
+    STATIC_MAP_ZOOM: int = 12
 
-    # Google Maps API Configuration
-    GOOGLE_MAPS_API_KEY = _require_env("GOOGLE_MAPS_API_KEY")
-    GOOGLE_MAPS_STATIC_API_URL = os.getenv("GOOGLE_MAPS_STATIC_API_URL", "https://maps.googleapis.com/maps/api/staticmap")
-    GOOGLE_MAPS_ELEVATION_API_URL = os.getenv("GOOGLE_MAPS_ELEVATION_API_URL", "https://maps.googleapis.com/maps/api/elevation/json")
-    GOOGLE_MAPS_JS_API_URL = os.getenv("GOOGLE_MAPS_JS_API_URL", "https://maps.googleapis.com/maps/api/js")
-    GOOGLE_MAPS_MAP_ID = os.getenv("GOOGLE_MAPS_MAP_ID", "")
-    
-    # Static Map Configuration
-    STATIC_MAP_WIDTH = int(os.getenv("STATIC_MAP_WIDTH", 600))
-    STATIC_MAP_HEIGHT = int(os.getenv("STATIC_MAP_HEIGHT", 400))
-    STATIC_MAP_ZOOM = int(os.getenv("STATIC_MAP_ZOOM", 12))
+    @computed_field
+    @property
+    def postgis_dsn(self) -> str:
+        # Build DSN from individual fields when POSTGIS_DSN is not set.
+        if self.POSTGIS_DSN:
+            return self.POSTGIS_DSN
+        return (
+            f"postgresql://{self.POSTGIS_USER}:{self.POSTGIS_PASSWORD}"
+            f"@{self.POSTGIS_HOST}:{self.POSTGIS_PORT}/{self.POSTGIS_DB}"
+        )
+
+    @computed_field
+    @property
+    def DEBUG(self) -> bool:
+        return self.FASTAPI_ENV == "development"
+
+    @model_validator(mode="after")
+    def validate_storage_backend_requirements(self):
+        if (
+            self.MAP_STORAGE_BACKEND == "supabase"
+            and (not self.SUPABASE_URL or not self.SUPABASE_SERVICE_ROLE_KEY)
+        ):
+            raise ValueError(
+                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required when "
+                "MAP_STORAGE_BACKEND=supabase"
+            )
+        return self
+
+    # Redis-backed rate limiter
+    RATE_LIMIT_ENABLED = _get_bool_env("RATE_LIMIT_ENABLED", True)
+    RATE_LIMIT_REDIS_URL = os.getenv("RATE_LIMIT_REDIS_URL", "redis://localhost:6379/0")
+    RATE_LIMIT_NAMESPACE = os.getenv("RATE_LIMIT_NAMESPACE", "map-backend")
+    RATE_LIMIT_FAIL_OPEN = _get_bool_env("RATE_LIMIT_FAIL_OPEN", True)
+    RATE_LIMIT_DEFAULT_LIMIT = int(os.getenv("RATE_LIMIT_DEFAULT_LIMIT", 240))
+    RATE_LIMIT_DEFAULT_WINDOW_SECONDS = int(
+        os.getenv("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60)
+    )
+    RATE_LIMIT_POLICIES = json.loads(os.getenv("RATE_LIMIT_POLICIES", "[]"))
 
     # Redis-backed rate limiter
     RATE_LIMIT_ENABLED = _get_bool_env("RATE_LIMIT_ENABLED", True)

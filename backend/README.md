@@ -2,25 +2,26 @@
 
 Syntrak backend consists of 4 microservices, all using a unified Python environment and standardized entry points.
 
-## 📋 Service Overview
+## Service Overview
 
-| Service | Port | Host | Purpose |
-|---------|------|------|---------|
-| **main-backend** | 8080 | 0.0.0.0 | Authentication, users, notifications, activity |
-| **community-backend** | 5001 | 0.0.0.0 | Posts, threads, comments (Reddit-like) |
-| **activity-backend** | 5100 | 127.0.0.1 | GPS tracking, kudos tracking |
-| **map-backend** | 5200 | 127.0.0.1 | Static maps, elevation API (Google Maps) |
+| Service                     | Port | Host      | Purpose                                        |
+| --------------------------- | ---- | --------- | ---------------------------------------------- |
+| **main-backend**      | 8080 | 0.0.0.0   | Authentication, users, notifications, activity |
+| **community-backend** | 5001 | 0.0.0.0   | Posts, threads, comments (Reddit-like)         |
+| **activity-backend**  | 5100 | 127.0.0.1 | GPS tracking, kudos tracking                   |
+| **map-backend**       | 5200 | 127.0.0.1 | Static maps, elevation API (Google Maps)       |
 
-## 🚀 Starting Services
+## Starting Services
 
 ### Unified Entry Point
 
 All services follow the same standardized entry point: **`python run.py`**
 
 This approach:
+
 - Uses configuration from `config.py` (settings, PORT, HOST, DEBUG)
 - Loads environment variables from `.env` file
-- Works with the shared Python virtual environment at `/backend/.venv`
+- Works with the shared Python virtual environment at the **repository root** (`.venv/`)
 - Provides consistent behavior across all services
 
 ### Start All Services (1 Terminal, 1 Command)
@@ -42,6 +43,7 @@ python run.py --service <service-name>
 Available services: `main`, `community`, `activity`, `map`
 
 Examples:
+
 ```bash
 python run.py --service main         # Start auth backend only
 python run.py --service community    # Start community backend only
@@ -57,7 +59,7 @@ You can also navigate to a service directory and run it directly:
 cd backend/main-backend
 python run.py
 
-# Or with the shared venv explicitly:
+# Or with the shared venv explicitly (repo root .venv):
 ../../.venv/bin/python run.py
 ```
 
@@ -66,6 +68,7 @@ python run.py
 ### Configuration Files
 
 Each service has a `config.py` file that defines:
+
 - **HOST**: Server binding address (e.g., `0.0.0.0`, `127.0.0.1`)
 - **PORT**: Server port number
 - **DEBUG**: Development flag (enables reload, verbose logging)
@@ -92,7 +95,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 JWT_SECRET=your-jwt-secret
 ```
 
-## 📝 Entry Point Details
+## Entry Point Details
 
 ### Standardized `run.py` Pattern
 
@@ -117,8 +120,7 @@ if __name__ == "__main__":
     )
 ```
 
-
-## ✅ Health Checks
+## Health Checks
 
 Verify services are running:
 
@@ -136,14 +138,14 @@ curl http://127.0.0.1:5100/health
 curl http://127.0.0.1:5200/health
 ```
 
-## 🔧 Python Environment
+## Python Environment
 
 ### Shared Virtual Environment
 
-All services use a shared Python environment located at `/backend/.venv`:
+All services use a shared Python environment at the **repository root**: `.venv/`
 
 ```bash
-# View Python version
+# From repository root — view Python version
 ./.venv/bin/python --version
 
 # View installed packages
@@ -156,20 +158,25 @@ All services use a shared Python environment located at `/backend/.venv`:
 ### Creating the Environment (if needed)
 
 ```bash
-cd /backend
+# From repository root (parent of backend/)
 python3.11 -m venv .venv
-./.venv/bin/pip install -r requirements.txt
+./.venv/bin/pip install -r backend/requirements.txt
 ```
 
-## 📚 Service Documentation
+## Service Documentation
+
+Platform-level backend technical guide:
+
+- [backend/docs/technical_guide.md](./docs/technical_guide.md) - Architecture, contracts, operations, and troubleshooting
 
 Each service has its own README:
+
 - [main-backend](./main-backend/README.md) - Authentication API
 - [community-backend](./community-backend/README.md) - Community/social features
 - [activity-backend](./activity-backend/README.md) - GPS and tracking
 - [map-backend](./map-backend/README.md) - Maps and elevation
 
-## 🧪 Testing
+## Testing
 
 Run tests for all services:
 
@@ -183,7 +190,7 @@ cd community-backend && pytest
 # See individual service READMEs for more details
 ```
 
-## 🐳 Docker
+## Docker
 
 Run all backend services with Docker Compose:
 
@@ -212,4 +219,3 @@ If you want to start only one service:
 cd backend
 docker compose up --build map-backend
 ```
-

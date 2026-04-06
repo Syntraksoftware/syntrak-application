@@ -8,9 +8,8 @@ services:
 
   main-backend:
     build:
-      context: ./main-backend
-      dockerfile: Dockerfile
-    container_name: syntrak-main-backend
+      context: .
+      dockerfile: ./main-backend/Dockerfile
     env_file:
       - ./main-backend/.env
     environment:
@@ -24,9 +23,8 @@ services:
 
   community-backend:
     build:
-      context: ./community-backend
-      dockerfile: Dockerfile
-    container_name: syntrak-community-backend
+      context: .
+      dockerfile: ./community-backend/Dockerfile
     env_file:
       - ./community-backend/.env
     environment:
@@ -40,9 +38,8 @@ services:
 
   activity-backend:
     build:
-      context: ./activity-backend
-      dockerfile: Dockerfile
-    container_name: syntrak-activity-backend
+      context: .
+      dockerfile: ./activity-backend/Dockerfile
     env_file:
       - ./activity-backend/.env
     environment:
@@ -66,9 +63,35 @@ services:
       - FASTAPI_ENV=production
       - HOST=0.0.0.0
       - PORT=5200
+      - MAP_STORAGE_BACKEND=${MAP_STORAGE_BACKEND:-supabase}
+      - POSTGIS_HOST=postgis
+      - POSTGIS_PORT=5432
+      - POSTGIS_DB=${POSTGRES_DB:-syntrak}
+      - POSTGIS_USER=${POSTGRES_USER:-syntrak}
+      - POSTGIS_PASSWORD=${POSTGRES_PASSWORD:-syntrak_local_dev}
       - RATE_LIMIT_REDIS_URL=redis://redis:6379/0
     ports:
       - "5200:5200"
     depends_on:
       - redis
     restart: unless-stopped
+
+  # Optional local Postgres+PostGIS for offline dev. Production geo data lives on Supabase (Postgres + PostGIS).
+  postgis:
+    image: postgis/postgis:16-3.4
+    profiles: ["postgis"]
+    env_file:
+      - ./postgres.env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgis_data:

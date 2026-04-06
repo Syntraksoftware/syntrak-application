@@ -1,14 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:syntrak/models/notification.dart';
-import 'package:syntrak/services/service_registry.dart';
 
 class NotificationsApi {
-  NotificationsApi({Dio? dio}) : _dio = dio ?? ServiceRegistry.instance.main;
+  NotificationsApi({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
 
+  static final Options _fastPollingOptions = Options(
+    sendTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 5),
+  );
+
   Future<List<AppNotification>> getPending() async {
-    final response = await _dio.get('/notifications/pending');
+    final response = await _dio.get(
+      '/notifications/pending',
+      options: _fastPollingOptions,
+    );
     if (response.data is! List) {
       return [];
     }
@@ -22,6 +29,7 @@ class NotificationsApi {
     final response = await _dio.get(
       '/notifications/history',
       queryParameters: {'limit': limit},
+      options: _fastPollingOptions,
     );
     if (response.data is! List) {
       return [];

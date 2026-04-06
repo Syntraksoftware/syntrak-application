@@ -1,16 +1,21 @@
 """
 Pytest configuration and shared fixtures.
 """
+
 import pytest
 from fastapi.testclient import TestClient
-from app.main import create_application
-from app.core.storage import user_store, User
+
 from app.core.security import hash_password
+from app.core.storage import User, user_store
+from app.core.supabase import supabase_client
+from app.main import create_application
 
 
 @pytest.fixture(scope="function")
-def app():
+def app(monkeypatch):
     """Create a fresh FastAPI app instance for each test."""
+    # Tests use in-memory fixtures; disable Supabase path for deterministic auth flows.
+    monkeypatch.setattr(supabase_client, "is_configured", lambda: False)
     return create_application()
 
 
@@ -38,7 +43,7 @@ def test_user(clean_storage):
         email="test@example.com",
         hashed_password=hash_password("testpassword123"),
         first_name="Test",
-        last_name="User"
+        last_name="User",
     )
     user_store.create(user)
     return user
@@ -51,16 +56,11 @@ def test_user_data():
         "email": "newuser@example.com",
         "password": "securepassword123",
         "first_name": "New",
-        "last_name": "User"
+        "last_name": "User",
     }
 
 
 @pytest.fixture
 def login_credentials():
     """Sample login credentials."""
-    return {
-        "email": "test@example.com",
-        "password": "testpassword123"
-    }
-
-
+    return {"email": "test@example.com", "password": "testpassword123"}

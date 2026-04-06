@@ -19,8 +19,9 @@ COPY map-backend/requirements.txt ./requirements-service.txt
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements-shared.txt && \
     pip install --no-cache-dir -r requirements-service.txt
+RUN pip install --no-cache-dir --upgrade "wheel>=0.46.2" "setuptools>=80.9.0" "jaraco.context>=6.1.0"
 
-# Copy application and shared code
+# Copy application code and shared package
 COPY map-backend/ ./
 COPY shared/ ./shared/
 

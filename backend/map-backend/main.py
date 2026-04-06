@@ -8,6 +8,7 @@ DO NOT run this file directly.
 Map Backend - FastAPI Application
 Service for static map images and elevation correction.
 """
+
 import logging
 from contextlib import asynccontextmanager
 import os
@@ -20,7 +21,9 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import get_config
-from services.supabase_client import initialize_map_client
+from routes.elevation import router as elevation_router
+from routes.maps import router as maps_router
+from services.storage_backend import get_storage_health, initialize_storage_backend
 from shared.rate_limiter import add_redis_rate_limiter
 
 # Configure logging
@@ -80,12 +83,12 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting Map Backend on {config.HOST}:{config.PORT}")
     logger.info(f"Environment: {config.FASTAPI_ENV} | Debug: {config.DEBUG}")
 
-    # Initialize Supabase client once at startup
+    # Initialize configured map storage backend once at startup.
     try:
-        initialize_map_client()
-        logger.info("✅ Supabase client initialized successfully")
+        initialize_storage_backend()
+        logger.info("✅ Storage backend initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Supabase client: {e}")
+        logger.error(f"❌ Failed to initialize storage backend: {e}")
         raise
 
     yield
@@ -128,9 +131,6 @@ app.add_middleware(
 )
 
 # Routers
-from routes.maps import router as maps_router
-from routes.elevation import router as elevation_router
-
 app.include_router(maps_router)
 app.include_router(elevation_router)
 
@@ -142,7 +142,13 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "map-backend"}
+    storage = get_storage_health()
+    status = "healthy" if storage.get("status") == "healthy" else "degraded"
+    return {
+        "status": status,
+        "service": "map-backend",
+        "storage": storage,
+    }
 
 
 if __name__ == "__main__":
