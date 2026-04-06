@@ -6,6 +6,8 @@ A standalone FastAPI backend for the community feature (Reddit-like functionalit
 
 - `doc/tech.md` - Community backend architecture, contracts, development, operations, and troubleshooting
 - `../docs/technical_guide.md` - Platform-level backend technical guide
+- `CURL_TESTS.md` - Manual curl scenarios, including cache warm/hit and invalidation checks
+- `CURL_TESTS_WINDOWS.md` - Windows PowerShell manual scenarios (includes user creation step)
 
 ## Overview
 
