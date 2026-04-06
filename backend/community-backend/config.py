@@ -1,8 +1,9 @@
 """Configuration for Community Backend FastAPI app."""
 
+import json
 from functools import lru_cache
 
-from pydantic import computed_field
+from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +24,23 @@ class Config(BaseSettings):
         "http://localhost:8080",
         "http://localhost:5173",
     ]
+
+    # Redis-backed rate limiter
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_REDIS_URL: str = "redis://localhost:6379/0"
+    RATE_LIMIT_NAMESPACE: str = "community-backend"
+    RATE_LIMIT_FAIL_OPEN: bool = True
+    RATE_LIMIT_DEFAULT_LIMIT: int = 240
+    RATE_LIMIT_DEFAULT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_POLICIES: str = "[]"
+
+    @field_validator("RATE_LIMIT_POLICIES", mode="before")
+    @classmethod
+    def parse_policies(cls, v: str | list) -> list:
+        """Parse JSON policies string or accept list directly."""
+        if isinstance(v, list):
+            return v
+        return json.loads(v) if v else []
 
     @computed_field
     @property
