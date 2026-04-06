@@ -36,6 +36,7 @@ services:
       - HOST=0.0.0.0
       - PORT=5001
       - RATE_LIMIT_REDIS_URL=redis://redis:6379/0
+      - CACHE_REDIS_URL=redis://redis:6379/0
     ports:
       - "5001:5001"
     depends_on:
