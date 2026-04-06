@@ -1,10 +1,9 @@
 """Configuration for Map Backend (FastAPI)."""
 
-import json
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import computed_field, model_validator
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -43,6 +42,15 @@ class Config(BaseSettings):
     STATIC_MAP_HEIGHT: int = 400
     STATIC_MAP_ZOOM: int = 12
 
+    # Redis-backed rate limiter
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_REDIS_URL: str = "redis://localhost:6379/0"
+    RATE_LIMIT_NAMESPACE: str = "map-backend"
+    RATE_LIMIT_FAIL_OPEN: bool = True
+    RATE_LIMIT_DEFAULT_LIMIT: int = 240
+    RATE_LIMIT_DEFAULT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_POLICIES: list[dict] = Field(default_factory=list)
+
     @computed_field
     @property
     def postgis_dsn(self) -> str:
@@ -70,28 +78,6 @@ class Config(BaseSettings):
                 "MAP_STORAGE_BACKEND=supabase"
             )
         return self
-
-    # Redis-backed rate limiter
-    RATE_LIMIT_ENABLED = _get_bool_env("RATE_LIMIT_ENABLED", True)
-    RATE_LIMIT_REDIS_URL = os.getenv("RATE_LIMIT_REDIS_URL", "redis://localhost:6379/0")
-    RATE_LIMIT_NAMESPACE = os.getenv("RATE_LIMIT_NAMESPACE", "map-backend")
-    RATE_LIMIT_FAIL_OPEN = _get_bool_env("RATE_LIMIT_FAIL_OPEN", True)
-    RATE_LIMIT_DEFAULT_LIMIT = int(os.getenv("RATE_LIMIT_DEFAULT_LIMIT", 240))
-    RATE_LIMIT_DEFAULT_WINDOW_SECONDS = int(
-        os.getenv("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60)
-    )
-    RATE_LIMIT_POLICIES = json.loads(os.getenv("RATE_LIMIT_POLICIES", "[]"))
-
-    # Redis-backed rate limiter
-    RATE_LIMIT_ENABLED = _get_bool_env("RATE_LIMIT_ENABLED", True)
-    RATE_LIMIT_REDIS_URL = os.getenv("RATE_LIMIT_REDIS_URL", "redis://localhost:6379/0")
-    RATE_LIMIT_NAMESPACE = os.getenv("RATE_LIMIT_NAMESPACE", "map-backend")
-    RATE_LIMIT_FAIL_OPEN = _get_bool_env("RATE_LIMIT_FAIL_OPEN", True)
-    RATE_LIMIT_DEFAULT_LIMIT = int(os.getenv("RATE_LIMIT_DEFAULT_LIMIT", 240))
-    RATE_LIMIT_DEFAULT_WINDOW_SECONDS = int(
-        os.getenv("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60)
-    )
-    RATE_LIMIT_POLICIES = json.loads(os.getenv("RATE_LIMIT_POLICIES", "[]"))
 
 
 @lru_cache(maxsize=1)
