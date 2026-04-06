@@ -31,6 +31,7 @@ from routes.media_routes import router as media_router
 from routes.posts import router as posts_router
 from routes.posts_read_routes import list_feed_posts
 from routes.subthreads import router as subthreads_router
+from services.community_cache import close_community_cache, initialize_community_cache
 from services.supabase_client import initialize_community_client
 
 # Configure logging
@@ -97,6 +98,7 @@ async def lifespan(app: FastAPI):
     # Initialize Supabase client at startup (thread-safe, single instance)
     try:
         initialize_community_client()
+        initialize_community_cache()
         logger.info("✅ Supabase Global Client Instance initialized successfully")
         _log_owned_domains_banner()
     except Exception as e:
@@ -106,6 +108,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
+    await close_community_cache()
     logger.info("Shutting down Community Backend")
 
 
