@@ -34,6 +34,13 @@ class Config(BaseSettings):
     RATE_LIMIT_DEFAULT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_POLICIES: list[dict] = Field(default_factory=list)
 
+    # Redis-backed response cache for read-heavy community endpoints
+    CACHE_ENABLED: bool = True
+    CACHE_REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_NAMESPACE: str = "community-backend-cache"
+    CACHE_FEED_TTL_SECONDS: int = 15
+    CACHE_POST_COMMENTS_TTL_SECONDS: int = 20
+
     @field_validator("RATE_LIMIT_POLICIES", mode="before")
     @classmethod
     def parse_policies(cls, v: str | list) -> list:
