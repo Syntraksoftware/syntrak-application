@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from shared import ListResponse, add_request_id_middleware, setup_exception_handlers
 from shared.deprecation import COMMUNITY_BACKEND_DEPRECATIONS, add_deprecation_middleware
+from shared.rate_limiter import add_redis_rate_limiter
 
 from config import get_config
 from routes.comments import router as comments_router
@@ -39,6 +40,39 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 config = get_config()
+
+
+def _get_rate_limit_policies() -> list[dict]:
+    """Route-level rate limit policies for community endpoints."""
+    default_policies = [
+        {
+            "path_pattern": "/api/v1/posts",
+            "methods": ["POST"],
+            "limit": 20,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/v1/comments",
+            "methods": ["POST"],
+            "limit": 60,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/v1/subthreads",
+            "methods": ["POST"],
+            "limit": 10,
+            "window_seconds": 60,
+        },
+        {
+            "path_pattern": "/api/v1/*",
+            "methods": ["GET"],
+            "limit": 200,
+            "window_seconds": 60,
+        },
+    ]
+    if config.RATE_LIMIT_POLICIES:
+        return config.RATE_LIMIT_POLICIES
+    return default_policies
 
 
 def _log_owned_domains_banner() -> None:
@@ -91,6 +125,24 @@ setup_exception_handlers(app)
 
 # Add deprecation middleware for legacy /api/* routes
 add_deprecation_middleware(app, COMMUNITY_BACKEND_DEPRECATIONS)
+
+if config.RATE_LIMIT_ENABLED:
+    add_redis_rate_limiter(
+        app,
+        redis_url=config.RATE_LIMIT_REDIS_URL,
+        namespace=config.RATE_LIMIT_NAMESPACE,
+        policies=_get_rate_limit_policies(),
+        default_limit=config.RATE_LIMIT_DEFAULT_LIMIT,
+        default_window_seconds=config.RATE_LIMIT_DEFAULT_WINDOW_SECONDS,
+        fail_open=config.RATE_LIMIT_FAIL_OPEN,
+    )
+    logger.info(
+        "Redis rate limiter enabled (namespace=%s, redis=%s)",
+        config.RATE_LIMIT_NAMESPACE,
+        config.RATE_LIMIT_REDIS_URL,
+    )
+else:
+    logger.warning("Redis rate limiter disabled via RATE_LIMIT_ENABLED=false")
 
 # Configure CORS
 app.add_middleware(
