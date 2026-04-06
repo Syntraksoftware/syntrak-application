@@ -14,7 +14,10 @@ The backend uses a **shared Python environment** at the **repository root**: `.v
 ```bash
 # From repository root (syntrak-application/)
 python3.11 -m venv .venv
+# macOS/Linux
 ./.venv/bin/pip install -r backend/requirements.txt
+# Windows (PowerShell/CMD)
+.\.venv\Scripts\pip install -r backend\requirements.txt
 ```
 **Configure Environment Variables** (optional, defaults provided):
 ```bash
